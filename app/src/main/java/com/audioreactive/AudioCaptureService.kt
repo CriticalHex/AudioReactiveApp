@@ -1,6 +1,6 @@
 package com.audioreactive
 
-import android.annotation.SuppressLint
+import android.Manifest
 import android.app.Activity
 import android.app.Notification
 import android.app.NotificationChannel
@@ -14,147 +14,126 @@ import android.media.AudioPlaybackCaptureConfiguration
 import android.media.AudioRecord
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
+import android.os.Binder
 import android.os.IBinder
+import android.os.Process
+import androidx.annotation.RequiresPermission
+import java.util.concurrent.ArrayBlockingQueue
 
 class AudioCaptureService : Service() {
 
     companion object {
         const val EXTRA_RESULT_CODE = "result_code"
         const val EXTRA_DATA = "data"
-        private const val NOTIFICATION_ID = 1
         private const val CHANNEL_ID = "media_projection"
+
+        private object CaptureConfig {
+            const val SAMPLE_RATE: Int = 48_000
+            const val CHANNEL_COUNT: Int = AudioFormat.CHANNEL_IN_MONO
+            const val ENCODING_FORMAT: Int = AudioFormat.ENCODING_PCM_FLOAT
+        }
     }
 
     private lateinit var mediaProjection: MediaProjection
     private lateinit var audioRecord: AudioRecord
+    private val audioQueue = ArrayBlockingQueue<FloatArray>(3)
+    private val processor = AudioProcessor(audioQueue)
+    private var captureThread: Thread? = null
     @Volatile private var running = false
 
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        super.onStartCommand(intent, flags, startId)
-        println("starting...")
-        startForeground(
-            NOTIFICATION_ID,
-            createNotification(),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
-        )
-        println("notification created")
 
-        val resultCode =
-            intent?.getIntExtra(EXTRA_RESULT_CODE, Activity.RESULT_CANCELED)
-                ?: return stopSelfAndAbort()
-        println("result code: $resultCode")
+        startForeground(1, createNotification(),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
 
-        val data: Intent =
-            intent.getParcelableExtra(EXTRA_DATA, Intent::class.java)
-                ?: return stopSelfAndAbort()
-        println("data: $data")
+        val resultCode = intent?.getIntExtra(EXTRA_RESULT_CODE, Activity.RESULT_CANCELED)
+            ?: return START_NOT_STICKY
+        val data = intent.getParcelableExtra(EXTRA_DATA, Intent::class.java)
+            ?: return START_NOT_STICKY
 
-        val projectionManager =
-            getSystemService(MediaProjectionManager::class.java)
-        println("got projection manager")
+        val projectionManager = getSystemService(MediaProjectionManager::class.java)
+        mediaProjection = projectionManager.getMediaProjection(resultCode, data) ?: return START_NOT_STICKY
 
-        mediaProjection =
-            projectionManager.getMediaProjection(resultCode, data)
-                ?: return stopSelfAndAbort()
-        println("got media projection")
-
-        startPlaybackCapture()
+        startCapture()
+        processor.start()
 
         return START_STICKY
     }
 
-    private fun startPlaybackCapture() {
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+    private fun startCapture() {
         running = true
-        println("starting playback capture")
 
-        val config =
-            AudioPlaybackCaptureConfiguration.Builder(mediaProjection)
-                .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
-                .addMatchingUsage(AudioAttributes.USAGE_GAME)
-                .build()
-        println("configured")
+        val config = AudioPlaybackCaptureConfiguration.Builder(mediaProjection)
+            .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
+            .addMatchingUsage(AudioAttributes.USAGE_GAME)
+            .build()
 
-        val format =
-            AudioFormat.Builder()
-                .setSampleRate(48_000)
-                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                .setChannelMask(AudioFormat.CHANNEL_IN_STEREO)
-                .build()
-        println("formatted")
+        val format = AudioFormat.Builder()
+            .setSampleRate(CaptureConfig.SAMPLE_RATE)
+            .setChannelMask(CaptureConfig.CHANNEL_COUNT)
+            .setEncoding(CaptureConfig.ENCODING_FORMAT)
+            .build()
 
-        val bufferSize =
-            AudioRecord.getMinBufferSize(
-                48_000,
-                AudioFormat.CHANNEL_IN_STEREO,
-                AudioFormat.ENCODING_PCM_16BIT
-            )
-        println("buffer size defined")
-
-        try {
-            audioRecord =
-                AudioRecord.Builder()
-                    .setAudioFormat(format)
-                    .setBufferSizeInBytes(bufferSize)
-                    .setAudioPlaybackCaptureConfig(config)
-                    .build()
-
-            audioRecord.startRecording()
-            println("started recording")
-
-        } catch (e: SecurityException) {
-            // MediaProjection revoked or invalid
-            println("error when starting to record, security exception")
-            stopSelf()
-            return
-        }
-
-        Thread {
-            val buffer = ByteArray(bufferSize)
-            while (running) {
-                val read = audioRecord.read(buffer, 0, buffer.size)
-                if (read > 0) {
-
-                }
-            }
-        }.start()
-    }
-
-    private fun createNotification(): Notification {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "System Audio Capture",
-            NotificationManager.IMPORTANCE_LOW
+        val bufferSize = AudioRecord.getMinBufferSize(
+            CaptureConfig.SAMPLE_RATE,
+            CaptureConfig.CHANNEL_COUNT,
+            CaptureConfig.ENCODING_FORMAT
         )
 
+        audioRecord = AudioRecord.Builder()
+            .setAudioFormat(format)
+            .setBufferSizeInBytes(bufferSize * 2)
+            .setAudioPlaybackCaptureConfig(config)
+            .build()
+
+        audioRecord.startRecording()
+
+        captureThread = Thread {
+            Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO)
+
+            val buffer = FloatArray(bufferSize / 4)
+
+            while (running) {
+                val read = audioRecord.read(buffer, 0, buffer.size, AudioRecord.READ_BLOCKING)
+                if (read > 0) {
+                    audioQueue.offer(buffer.copyOf(read))
+                }
+            }
+        }.apply { start() }
+    }
+
+    fun spectrumFlow() = processor.spectrumFlow
+
+    override fun onDestroy() {
+        println("SERVICE DESTROYED!!")
+        running = false
+        captureThread?.interrupt()
+        audioRecord.stop()
+        audioRecord.release()
+        mediaProjection.stop()
+        processor.stop()
+        super.onDestroy()
+    }
+
+    inner class LocalBinder : Binder() {
+        fun getService(): AudioCaptureService = this@AudioCaptureService
+    }
+
+    private val binder = LocalBinder()
+
+    override fun onBind(intent: Intent?): IBinder = binder
+
+    private fun createNotification(): Notification {
+        val channel = NotificationChannel(CHANNEL_ID, "Audio Capture",
+            NotificationManager.IMPORTANCE_LOW)
         getSystemService(NotificationManager::class.java)
             .createNotificationChannel(channel)
 
         return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("Capturing system audio")
             .setSmallIcon(android.R.drawable.ic_media_play)
-            .setOngoing(true)
             .build()
     }
-
-    private fun stopSelfAndAbort(): Int {
-        stopSelf()
-        return START_NOT_STICKY
-    }
-
-    override fun onDestroy() {
-        running = false
-
-        if (::audioRecord.isInitialized) {
-            audioRecord.stop()
-            audioRecord.release()
-        }
-
-        if (::mediaProjection.isInitialized) {
-            mediaProjection.stop()
-        }
-
-        super.onDestroy()
-    }
-
-    override fun onBind(intent: Intent?): IBinder? = null
 }

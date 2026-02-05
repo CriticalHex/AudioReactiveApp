@@ -49,6 +49,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation("androidx.activity:activity-ktx:${activityVersion}")
     implementation("androidx.fragment:fragment-ktx:${fragmentVersion}")
+    implementation("com.github.wendykierp:JTransforms:3.2")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
