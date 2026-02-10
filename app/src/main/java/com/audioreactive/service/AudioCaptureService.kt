@@ -137,7 +137,7 @@ class AudioCaptureService : Service() {
                     buffer,
                     0,
                     buffer.size,
-                    AudioRecord.READ_BLOCKING
+                    AudioRecord.READ_NON_BLOCKING
                 )
                 if (read > 0) {
                     audioQueue.offer(buffer.copyOf(read))
