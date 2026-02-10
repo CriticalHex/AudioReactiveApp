@@ -1,6 +1,7 @@
-package com.audioreactive
+package com.audioreactive.service
 
 import android.Manifest
+import android.R.drawable.ic_media_play
 import android.app.Activity
 import android.app.Notification
 import android.app.NotificationChannel
@@ -18,6 +19,7 @@ import android.os.Binder
 import android.os.IBinder
 import android.os.Process
 import androidx.annotation.RequiresPermission
+import com.audioreactive.AudioProcessor
 import java.util.concurrent.ArrayBlockingQueue
 
 class AudioCaptureService : Service() {
@@ -46,6 +48,10 @@ class AudioCaptureService : Service() {
 
         startForeground(1, createNotification(),
             ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
+
+        if (::mediaProjection.isInitialized) {
+            return START_STICKY
+        }
 
         val resultCode = intent?.getIntExtra(EXTRA_RESULT_CODE, Activity.RESULT_CANCELED)
             ?: return START_NOT_STICKY
@@ -96,7 +102,12 @@ class AudioCaptureService : Service() {
             val buffer = FloatArray(bufferSize / 4)
 
             while (running) {
-                val read = audioRecord.read(buffer, 0, buffer.size, AudioRecord.READ_BLOCKING)
+                val read = audioRecord.read(
+                    buffer,
+                    0,
+                    buffer.size,
+                    AudioRecord.READ_BLOCKING
+                )
                 if (read > 0) {
                     audioQueue.offer(buffer.copyOf(read))
                 }
@@ -125,15 +136,22 @@ class AudioCaptureService : Service() {
 
     override fun onBind(intent: Intent?): IBinder = binder
 
+    override fun onUnbind(intent: Intent?): Boolean {
+        println("Unbound service!")
+        return super.onUnbind(intent)
+    }
+
     private fun createNotification(): Notification {
-        val channel = NotificationChannel(CHANNEL_ID, "Audio Capture",
-            NotificationManager.IMPORTANCE_LOW)
+        val channel = NotificationChannel(
+            CHANNEL_ID, "Audio Capture",
+            NotificationManager.IMPORTANCE_LOW
+        )
         getSystemService(NotificationManager::class.java)
             .createNotificationChannel(channel)
 
         return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("Capturing system audio")
-            .setSmallIcon(android.R.drawable.ic_media_play)
+            .setSmallIcon(ic_media_play)
             .build()
     }
 }

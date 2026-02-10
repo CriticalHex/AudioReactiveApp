@@ -1,7 +1,6 @@
 package com.audioreactive
 
 import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.media.projection.MediaProjectionManager
@@ -9,22 +8,20 @@ import android.os.Bundle
 import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.lifecycleScope
+import com.audioreactive.service.AudioCaptureService
+import com.audioreactive.ui.components.StartAudioCaptureButton
+import com.audioreactive.ui.screens.VisualizerScreen
 import com.audioreactive.ui.theme.AudioReactiveTheme
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-
     private var audioService: AudioCaptureService? = null
     private val spectrumState = mutableStateOf(FloatArray(0))
 
@@ -32,10 +29,12 @@ class MainActivity : ComponentActivity() {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             val localBinder = binder as AudioCaptureService.LocalBinder
             audioService = localBinder.getService()
+            println("Service bound via connection")
             observeSpectrum()
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
+            println("Service disconnected via connection")
             audioService = null
         }
     }
@@ -53,15 +52,22 @@ class MainActivity : ComponentActivity() {
         setContent {
             AudioReactiveTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    VisualizerScreen(spectrumState)
+                    StartAudioCaptureButton(Modifier.padding(innerPadding)) {
+                        requestScreenCaptureAndStartService()
+                    }
+                    VisualizerScreen(spectrumState, Modifier.padding(innerPadding))
                 }
             }
         }
 
-        requestScreenCapture()
+        bindService(
+            Intent(this, AudioCaptureService::class.java),
+            serviceConnection,
+            BIND_AUTO_CREATE
+        )
     }
 
-    private fun requestScreenCapture() {
+    private fun requestScreenCaptureAndStartService() {
         val mgr = getSystemService(MediaProjectionManager::class.java)
         projectionLauncher.launch(mgr.createScreenCaptureIntent())
     }
@@ -71,9 +77,8 @@ class MainActivity : ComponentActivity() {
             putExtra(AudioCaptureService.EXTRA_RESULT_CODE, resultCode)
             putExtra(AudioCaptureService.EXTRA_DATA, data)
         }
-
+        println("Starting foreground service")
         startForegroundService(intent)
-        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
     }
 
     private fun observeSpectrum() {
@@ -88,20 +93,24 @@ class MainActivity : ComponentActivity() {
         unbindService(serviceConnection)
         super.onDestroy()
     }
-}
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+    override fun onPause() {
+        println("Paused")
+        super.onPause()
+    }
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    AudioReactiveTheme {
-        Greeting("Android")
+    override fun onResume() {
+        println("Resumed")
+        super.onResume()
+    }
+
+    override fun onRestart() {
+        println("Restarted")
+        super.onRestart()
+    }
+
+    override fun onStop() {
+        println("Stopped, isFinishing is $isFinishing")
+        super.onStop()
     }
 }

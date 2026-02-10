@@ -1,15 +1,25 @@
 package com.audioreactive
 
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import org.jtransforms.fft.FloatFFT_1D
 import java.util.concurrent.BlockingQueue
-import kotlin.math.*
+import kotlin.math.cos
+import kotlin.math.log10
+import kotlin.math.min
+import kotlin.math.sqrt
 
 class AudioProcessor(
     private val inputQueue: BlockingQueue<FloatArray>
 ) {
-    private val scope = CoroutineScope(Dispatchers.Default)
+    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
     private val fftSize = 2048
     private val fft = FloatFFT_1D(fftSize.toLong())
 
@@ -32,14 +42,14 @@ class AudioProcessor(
         }
     }
 
-    fun stop() = scope.cancel()
+    fun stop() {
+        scope.cancel()
+    }
 
     private fun process(samples: FloatArray) {
         val n = min(samples.size, fftSize)
 
-        for (i in 0 until n) {
-            fftBuffer[i] = samples[i] * window[i]
-        }
+        for (i in 0 until n) fftBuffer[i] = samples[i] * window[i]
         for (i in n until fftSize) fftBuffer[i] = 0f
 
         fft.realForwardFull(fftBuffer)
