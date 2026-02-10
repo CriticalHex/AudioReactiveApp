@@ -27,14 +27,15 @@ class MainActivity : ComponentActivity() {
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-            val localBinder = binder as AudioCaptureService.LocalBinder
-            audioService = localBinder.getService()
+            audioService = (binder as AudioCaptureService.LocalBinder).getService()
             println("Service bound via connection")
+            audioService?.registerListener(serviceListener)
             observeSpectrum()
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
             println("Service disconnected via connection")
+            audioService?.unregisterListener(serviceListener)
             audioService = null
         }
     }
@@ -45,6 +46,16 @@ class MainActivity : ComponentActivity() {
                 startAudioService(result.resultCode, result.data!!)
             }
         }
+
+    //had to specify type here or else recursive type error??
+    private val serviceListener: AudioCaptureService.ServiceEventListener  = object : AudioCaptureService.ServiceEventListener {
+        override fun onCaptureStopped() {
+            runOnUiThread {
+                println("Capture stopped, unbinding")
+                unbindService(serviceConnection)
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,6 +90,11 @@ class MainActivity : ComponentActivity() {
         }
         println("Starting foreground service")
         startForegroundService(intent)
+        bindService(
+            Intent(this, AudioCaptureService::class.java),
+            serviceConnection,
+            BIND_AUTO_CREATE
+        )
     }
 
     private fun observeSpectrum() {

@@ -16,7 +16,9 @@ import android.media.AudioRecord
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Binder
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.Process
 import androidx.annotation.RequiresPermission
 import com.audioreactive.AudioProcessor
@@ -36,6 +38,24 @@ class AudioCaptureService : Service() {
         }
     }
 
+    interface ServiceEventListener {
+        fun onCaptureStopped()
+    }
+
+    private val listeners = mutableSetOf<ServiceEventListener>()
+
+    fun registerListener(listener: ServiceEventListener) {
+        listeners += listener
+    }
+
+    fun unregisterListener(listener: ServiceEventListener) {
+        listeners -= listener
+    }
+
+    private fun notifyCaptureStopped() {
+        listeners.forEach { it.onCaptureStopped() }
+    }
+
     private lateinit var mediaProjection: MediaProjection
     private lateinit var audioRecord: AudioRecord
     private val audioQueue = ArrayBlockingQueue<FloatArray>(3)
@@ -43,8 +63,17 @@ class AudioCaptureService : Service() {
     private var captureThread: Thread? = null
     @Volatile private var running = false
 
+    private val projectionCallback = object : MediaProjection.Callback() {
+        override fun onStop() {
+            println("Media projection stopped")
+            notifyCaptureStopped()
+            stopCaptureAndSelf()
+        }
+    }
+
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        println("Service started!!")
 
         startForeground(1, createNotification(),
             ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
@@ -60,6 +89,8 @@ class AudioCaptureService : Service() {
 
         val projectionManager = getSystemService(MediaProjectionManager::class.java)
         mediaProjection = projectionManager.getMediaProjection(resultCode, data) ?: return START_NOT_STICKY
+
+        mediaProjection.registerCallback(projectionCallback, Handler(Looper.getMainLooper()))
 
         startCapture()
         processor.start()
@@ -117,14 +148,40 @@ class AudioCaptureService : Service() {
 
     fun spectrumFlow() = processor.spectrumFlow
 
+    private fun stopCaptureAndSelf() {
+        println("Stopping self. Running was: $running")
+        if (!running) return
+
+        running = false
+
+        captureThread?.interrupt()
+        captureThread = null
+
+        runCatching {
+            audioRecord.stop()
+            audioRecord.release()
+        }
+
+        processor.stop()
+
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
     override fun onDestroy() {
         println("SERVICE DESTROYED!!")
         running = false
         captureThread?.interrupt()
-        audioRecord.stop()
-        audioRecord.release()
-        mediaProjection.stop()
+        captureThread = null
+        runCatching {
+            audioRecord.stop()
+            audioRecord.release()
+        }
         processor.stop()
+        runCatching {
+            mediaProjection.unregisterCallback(projectionCallback)
+            mediaProjection.stop()
+        }
         super.onDestroy()
     }
 
