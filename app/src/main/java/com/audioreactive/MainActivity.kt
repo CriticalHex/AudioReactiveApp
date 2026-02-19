@@ -9,14 +9,17 @@ import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.lifecycleScope
 import com.audioreactive.service.AudioCaptureService
 import com.audioreactive.ui.components.StartAudioCaptureButton
+import com.audioreactive.ui.screens.VisualizerLattice
 import com.audioreactive.ui.screens.VisualizerScreen
 import com.audioreactive.ui.theme.AudioReactiveTheme
 import kotlinx.coroutines.launch
@@ -62,11 +65,14 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             AudioReactiveTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                Scaffold(modifier = Modifier.fillMaxSize().background(Color.Black)
+
+                ) { innerPadding ->
                     StartAudioCaptureButton(Modifier.padding(innerPadding)) {
                         requestScreenCaptureAndStartService()
                     }
                     VisualizerScreen(spectrumState, Modifier.padding(innerPadding))
+                    VisualizerLattice()
                 }
             }
         }

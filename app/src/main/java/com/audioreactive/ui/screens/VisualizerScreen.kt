@@ -1,6 +1,7 @@
 package com.audioreactive.ui.screens
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -13,7 +14,10 @@ fun VisualizerScreen(spectrumState: State<FloatArray>, modifier: Modifier = Modi
 
     val spectrum by spectrumState
 
-    Canvas(modifier = modifier.fillMaxSize()) {
+    Canvas(modifier = modifier
+        .fillMaxSize()
+
+    ) {
 
         if (spectrum.isEmpty()) return@Canvas
 
@@ -34,5 +38,6 @@ fun VisualizerScreen(spectrumState: State<FloatArray>, modifier: Modifier = Modi
                 size = Size(barWidth * 0.8f, barHeight)
             )
         }
+
     }
 }
