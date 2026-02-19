@@ -10,6 +10,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 
 @Composable
+<<<<<<< HEAD
 fun VisualizerScreen(spectrumState: State<FloatArray>, modifier: Modifier = Modifier) {
 
     val spectrum by spectrumState
@@ -18,6 +19,10 @@ fun VisualizerScreen(spectrumState: State<FloatArray>, modifier: Modifier = Modi
         .fillMaxSize()
 
     ) {
+=======
+fun VisualizerScreen(spectrum: FloatArray, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier.fillMaxSize()) {
+>>>>>>> 71a6123c99fdc52ecf4d8b7ad89942ee84553a07
 
         if (spectrum.isEmpty()) return@Canvas
 
