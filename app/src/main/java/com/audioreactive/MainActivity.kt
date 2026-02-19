@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
                     StartAudioCaptureButton(Modifier.padding(innerPadding)) {
                         requestScreenCaptureAndStartService()
                     }
-                    VisualizerScreen(spectrumState, Modifier.padding(innerPadding))
+                    VisualizerScreen(spectrumState.value, Modifier.padding(innerPadding))
                 }
             }
         }
