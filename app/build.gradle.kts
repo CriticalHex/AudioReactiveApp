@@ -42,6 +42,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.media3.exoplayer)
     val activityVersion = "1.12.2"
     val fragmentVersion = "1.8.9"
     implementation(libs.androidx.core.ktx)
