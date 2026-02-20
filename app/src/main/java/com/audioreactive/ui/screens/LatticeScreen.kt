@@ -8,11 +8,15 @@ import com.csci448.abhattarai.reactortest.points.AnimatedLatticeDisplay
 import com.csci448.abhattarai.reactortest.points.lattice
 
 @Composable
-fun VisualizerLattice() {
+fun VisualizerLattice(modifier: Modifier) {
+
+    modifier
+        .fillMaxSize()
+
 
     val l = remember {
         lattice(
-            x = 630, // idk why I have to offset it so wierd
+            x = 540, // idk why I have to offset it so wierd
             y = 1080,
             width = 0,
             height = 1080,
