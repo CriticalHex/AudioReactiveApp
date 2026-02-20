@@ -9,16 +9,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
-fun StartAudioCaptureButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
+fun SelectFileButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
     Button(modifier = modifier.fillMaxWidth(), onClick = onClick) {
-        Text("Start audio capture")
+        Text("Select File")
 //        TODO("Change this text to an xml string")
     }
 }
 
 @Composable
 @Preview
-private fun PreviewStartAudioCaptureButton() {
+private fun PreviewSelectFileButton() {
     Scaffold { innerPadding ->
         StartAudioCaptureButton {  }
     }
