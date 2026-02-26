@@ -9,13 +9,13 @@ import android.os.Bundle
 import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts.*
+import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
+import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModelProvider
@@ -28,13 +28,15 @@ import com.audioreactive.ui.screens.VisualizerLattice
 import com.audioreactive.ui.screens.VisualizerScreen
 import com.audioreactive.ui.theme.AudioReactiveTheme
 import com.audioreactive.ui.viewmodel.AudioPlayerViewModel
-import com.csci448.abhattarai.reactortest.points.LatticeDisplay
+import com.audioreactive.ui.viewmodel.VisualizerViewModel
+import com.audioreactive.ui.viewmodel.VisualizerViewModel.VisualizerIntent.UpdateSpectrumIntent
+import com.audioreactive.ui.viewmodel.VisualizerViewModel.VisualizerIntent.UpdateVolumeIntent
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private var audioService: AudioCaptureService? = null
-    private val spectrumState = mutableStateOf(FloatArray(0))
     private lateinit var audioPlayerViewModel: AudioPlayerViewModel
+    private lateinit var visualizerViewModel: VisualizerViewModel
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -82,6 +84,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         audioPlayerViewModel = ViewModelProvider(this)[AudioPlayerViewModel::class.java]
+        visualizerViewModel = ViewModelProvider(this)[VisualizerViewModel::class.java]
         setContent {
             AudioReactiveTheme {
                 Scaffold(
@@ -104,10 +107,9 @@ class MainActivity : ComponentActivity() {
                                 audioPlayerViewModel.play()
                         }
                     }
-                    VisualizerScreen(spectrumState.value, Modifier.padding(innerPadding))
+                    VisualizerScreen(visualizerViewModel.state.value.spectrum, Modifier.padding(innerPadding))
                     Box(modifier = Modifier) {
                         VisualizerLattice(Modifier.padding(innerPadding))
-
                     }
 
                 }
@@ -143,7 +145,12 @@ class MainActivity : ComponentActivity() {
     private fun observeSpectrum() {
         lifecycleScope.launch {
             audioService?.spectrumFlow()?.collect {
-                spectrumState.value = it
+                visualizerViewModel.handleIntent(UpdateSpectrumIntent(it))
+            }
+        }
+        lifecycleScope.launch {
+            audioService?.volumeFlow()?.collect {
+                visualizerViewModel.handleIntent(UpdateVolumeIntent(it))
             }
         }
     }

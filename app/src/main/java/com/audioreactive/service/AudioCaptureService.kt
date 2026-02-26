@@ -147,6 +147,7 @@ class AudioCaptureService : Service() {
     }
 
     fun spectrumFlow() = processor.spectrumFlow
+    fun volumeFlow() = processor.volumeFlow
 
     private fun stopCaptureAndSelf() {
         println("Stopping self. Running was: $running")
