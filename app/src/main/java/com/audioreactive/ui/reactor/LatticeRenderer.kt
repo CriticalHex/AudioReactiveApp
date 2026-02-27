@@ -48,23 +48,25 @@ fun AnimatedLatticeDisplay(
     modifier: Modifier = Modifier,
     maxLines: Int = 1100,
     strokeWidth: Float = 1f,
-    timeScale: Double = 1.0
+    timeScale: Double = 1.0,
+    timeProvider: ((Long) -> Double)? = null
 ) {
     var frame by remember { mutableStateOf(0L) }
 
-    LaunchedEffect(l, timeScale) {
+    LaunchedEffect(l, timeScale, timeProvider) {
         val start = withFrameNanos { it }
         while (true) {
             val now = withFrameNanos { it }
-            val t = ((now - start) / 1_000_000_000.0) * timeScale
+            val t = timeProvider?.invoke(now)
+                ?: (((now - start) / 1_000_000_000.0) * timeScale)
+
             l.update(t)
-            frame = now // forces recomposition
+            frame = now
         }
     }
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        frame // observe changes
+        frame
         drawLatticeLines(l, maxLines = maxLines, strokeWidth = strokeWidth)
     }
 }
-

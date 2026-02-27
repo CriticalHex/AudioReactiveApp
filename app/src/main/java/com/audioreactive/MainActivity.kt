@@ -1,5 +1,6 @@
 package com.audioreactive
 
+import com.audioreactive.ui.screens.VisualizerLattice
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
@@ -28,6 +29,7 @@ import com.audioreactive.ui.screens.VisualizerLattice
 import com.audioreactive.ui.screens.VisualizerScreen
 import com.audioreactive.ui.theme.AudioReactiveTheme
 import com.audioreactive.ui.viewmodel.AudioPlayerViewModel
+import com.audioreactive.ui.viewmodel.LatticeViewModel
 import com.audioreactive.ui.viewmodel.VisualizerViewModel
 import com.audioreactive.ui.viewmodel.VisualizerViewModel.VisualizerIntent.UpdateSpectrumIntent
 import com.audioreactive.ui.viewmodel.VisualizerViewModel.VisualizerIntent.UpdateVolumeIntent
@@ -37,6 +39,8 @@ class MainActivity : ComponentActivity() {
     private var audioService: AudioCaptureService? = null
     private lateinit var audioPlayerViewModel: AudioPlayerViewModel
     private lateinit var visualizerViewModel: VisualizerViewModel
+
+    private lateinit var latticeViewModel: LatticeViewModel
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -85,6 +89,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         audioPlayerViewModel = ViewModelProvider(this)[AudioPlayerViewModel::class.java]
         visualizerViewModel = ViewModelProvider(this)[VisualizerViewModel::class.java]
+        latticeViewModel = ViewModelProvider(this)[LatticeViewModel::class.java]
         setContent {
             AudioReactiveTheme {
                 Scaffold(
@@ -108,8 +113,12 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     VisualizerScreen(visualizerViewModel.state.value.spectrum, Modifier.padding(innerPadding))
-                    Box(modifier = Modifier) {
-                        VisualizerLattice(Modifier.padding(innerPadding))
+
+                    Box(modifier = Modifier.padding(innerPadding)) {
+                        VisualizerLattice(
+                            modifier = Modifier.fillMaxSize(),
+                            vm = latticeViewModel
+                        )
                     }
 
                 }
