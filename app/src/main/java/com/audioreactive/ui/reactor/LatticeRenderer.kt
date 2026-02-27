@@ -12,7 +12,8 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
-
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 
 fun DrawScope.drawLatticeLines(l: lattice, maxLines: Int = 1100, strokeWidth: Float = 1f) {
     val pts = l.getProjectedPoints()
@@ -49,9 +50,11 @@ fun AnimatedLatticeDisplay(
     maxLines: Int = 1100,
     strokeWidth: Float = 1f,
     timeScale: Double = 1.0,
+    volume: Float = 0f,
     timeProvider: ((Long) -> Double)? = null
 ) {
     var frame by remember { mutableStateOf(0L) }
+    val latestVolume by rememberUpdatedState(volume)
 
     LaunchedEffect(l, timeScale, timeProvider) {
         val start = withFrameNanos { it }
@@ -60,7 +63,7 @@ fun AnimatedLatticeDisplay(
             val t = timeProvider?.invoke(now)
                 ?: (((now - start) / 1_000_000_000.0) * timeScale)
 
-            l.update(t)
+            l.update(t, latestVolume.toDouble())
             frame = now
         }
     }

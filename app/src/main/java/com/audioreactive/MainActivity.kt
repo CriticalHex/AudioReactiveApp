@@ -117,7 +117,8 @@ class MainActivity : ComponentActivity() {
                     Box(modifier = Modifier.padding(innerPadding)) {
                         VisualizerLattice(
                             modifier = Modifier.fillMaxSize(),
-                            vm = latticeViewModel
+                            vm = latticeViewModel,
+                            volume = visualizerViewModel.state.value.volume
                         )
                     }
 

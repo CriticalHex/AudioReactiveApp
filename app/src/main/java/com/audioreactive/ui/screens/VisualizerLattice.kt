@@ -13,7 +13,8 @@ import com.csci448.abhattarai.reactortest.points.lattice
 @Composable
 fun VisualizerLattice(
     modifier: Modifier = Modifier,
-    vm: LatticeViewModel
+    vm: LatticeViewModel,
+    volume: Float
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val density = LocalDensity.current
@@ -35,7 +36,8 @@ fun VisualizerLattice(
             modifier = Modifier.fillMaxSize(),
             strokeWidth = 1f,
             timeProvider = { now: Long -> vm.timeSeconds(now) },
-            timeScale = 1.0
+            timeScale = 1.0,
+            volume = volume
         )
     }
 }

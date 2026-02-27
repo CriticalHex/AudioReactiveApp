@@ -344,7 +344,7 @@ class lattice(
     }
 
     private fun computeProjectedPoints(volume: Double) {
-        val base = height.toFloat() / 5f
+        val base = minOf(width, height).toFloat() / 7f
         val scale = base * (1f + volume.toFloat().coerceIn(0f, 2f))
 
         for (i in 0 until 100) {
