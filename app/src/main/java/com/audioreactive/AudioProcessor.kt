@@ -64,11 +64,9 @@ class AudioProcessor(
         // this is what my c++ program was doing
         // not sure if it needs to anything other than return samples.maxOf { abs(it) }
         // since this is magnitude, not whatever windows gives you
-        var peakVolume = samples.maxOf { abs(it) }.toDouble()
-        if (peakVolume == 0.0) {
-            peakVolume = 1.0
-        }
-        return atan(peakVolume + .2).toFloat()
+        val peakVolume = samples.maxOf { abs(it) }.toDouble()
+        if (peakVolume <= 1e-6f) return 0f
+        return atan((peakVolume + 0.2f).toDouble()).toFloat()
     }
 
     private fun processVolume(samples: FloatArray) {

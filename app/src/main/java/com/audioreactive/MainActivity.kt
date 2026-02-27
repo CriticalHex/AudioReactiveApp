@@ -8,6 +8,7 @@ import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.IBinder
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
@@ -34,7 +35,7 @@ import com.audioreactive.ui.viewmodel.VisualizerViewModel
 import com.audioreactive.ui.viewmodel.VisualizerViewModel.VisualizerIntent.UpdateSpectrumIntent
 import com.audioreactive.ui.viewmodel.VisualizerViewModel.VisualizerIntent.UpdateVolumeIntent
 import kotlinx.coroutines.launch
-
+import kotlinx.coroutines.flow.sample
 class MainActivity : ComponentActivity() {
     private var audioService: AudioCaptureService? = null
     private lateinit var audioPlayerViewModel: AudioPlayerViewModel
@@ -154,13 +155,18 @@ class MainActivity : ComponentActivity() {
 
     private fun observeSpectrum() {
         lifecycleScope.launch {
-            audioService?.spectrumFlow()?.collect {
-                visualizerViewModel.handleIntent(UpdateSpectrumIntent(it))
-            }
+            audioService?.volumeFlow()
+                ?.sample(10)
+                ?.collect { v ->
+                    Log.d("VOLUME", "volume=${"%.3f".format(v)}")
+                    visualizerViewModel.handleIntent(UpdateVolumeIntent(v))
+                }
+
         }
+
         lifecycleScope.launch {
-            audioService?.volumeFlow()?.collect {
-                visualizerViewModel.handleIntent(UpdateVolumeIntent(it))
+            audioService?.spectrumFlow()?.collect { bands ->
+                visualizerViewModel.handleIntent(UpdateSpectrumIntent(bands))
             }
         }
     }
