@@ -7,8 +7,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import com.audioreactive.ui.viewmodel.LatticeViewModel
-import com.csci448.abhattarai.reactortest.points.AnimatedLatticeDisplay
-import com.csci448.abhattarai.reactortest.points.lattice
+import com.audioreactive.ui.reactor.AnimatedLatticeDisplay
+import com.audioreactive.ui.reactor.lattice
 
 @Composable
 fun VisualizerLattice(

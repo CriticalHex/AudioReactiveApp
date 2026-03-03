@@ -22,6 +22,8 @@ class AudioProcessor(
 ) {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
+    private val SILENCE_DB = -120f
+
     private val fftSize = 2048
     private val fft = FloatFFT_1D(fftSize.toLong())
 
@@ -32,7 +34,8 @@ class AudioProcessor(
     private val fftBuffer = FloatArray(fftSize * 2)
     private val smooth = FloatArray(fftSize / 2)
 
-    private val _spectrumFlow = MutableStateFlow(FloatArray(fftSize / 2))
+    private val _spectrumFlow =
+        MutableStateFlow(FloatArray(fftSize / 2) { SILENCE_DB }) // Initialize to -120 DB
     private val _volumeFlow = MutableStateFlow(0f)
 
     val spectrumFlow = _spectrumFlow.asStateFlow()
@@ -66,7 +69,7 @@ class AudioProcessor(
         // since this is magnitude, not whatever windows gives you
         val peakVolume = samples.maxOf { abs(it) }.toDouble()
         if (peakVolume <= 1e-6f) return 0f
-        return atan((peakVolume + 0.2f).toDouble()).toFloat()
+        return atan((peakVolume + 0.2f).toFloat())
     }
 
     private fun processVolume(samples: FloatArray) {

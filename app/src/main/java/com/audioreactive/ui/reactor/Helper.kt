@@ -1,4 +1,4 @@
-package com.csci448.abhattarai.reactortest.points
+package com.audioreactive.ui.reactor
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color

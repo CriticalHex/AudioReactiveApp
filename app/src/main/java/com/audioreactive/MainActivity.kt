@@ -174,14 +174,17 @@ class MainActivity : ComponentActivity() {
 
     private fun observeSpectrum() {
         lifecycleScope.launch {
-            audioService?.volumeFlow()?.sample(10)?.collect { v ->
-                Log.d("VOLUME", "volume=${"%.3f".format(v)}")
+            audioService?.volumeFlow()?.sample(1000)?.collect { v ->
+//                Log.d("VOLUME", "volume=${"%.3f".format(v)}")
                 visualizerViewModel.handleIntent(UpdateVolumeIntent(v))
             }
         }
 
         lifecycleScope.launch {
             audioService?.spectrumFlow()?.collect { bands ->
+                Log.d("SPECTRUM", bands.joinToString {
+                    "%.3f".format(it)
+                })
                 visualizerViewModel.handleIntent(UpdateSpectrumIntent(bands))
             }
         }
