@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
+import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
@@ -23,6 +24,10 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.*
@@ -85,11 +90,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun enableFullScreen() {
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         audioPlayerViewModel = ViewModelProvider(this)[AudioPlayerViewModel::class.java]
         visualizerViewModel = ViewModelProvider(this)[VisualizerViewModel::class.java]
         latticeViewModel = ViewModelProvider(this)[LatticeViewModel::class.java]
+
+        enableFullScreen()
 
         setContent {
             AudioReactiveTheme {
