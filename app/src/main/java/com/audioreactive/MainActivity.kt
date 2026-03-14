@@ -1,6 +1,5 @@
 package com.audioreactive
 
-import com.audioreactive.ui.screens.VisualizerLattice
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
@@ -9,32 +8,54 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
-import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material3.Button
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.core.view.ViewCompat
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.compose.*
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.audioreactive.service.AudioCaptureService
 import com.audioreactive.ui.components.SelectFileButton
 import com.audioreactive.ui.components.StartAudioCaptureButton
 import com.audioreactive.ui.screens.SettingsScreen
+import com.audioreactive.ui.screens.VisualizerLattice
 import com.audioreactive.ui.screens.VisualizerScreen
 import com.audioreactive.ui.theme.AudioReactiveTheme
 import com.audioreactive.ui.viewmodel.AudioPlayerViewModel
@@ -44,6 +65,7 @@ import com.audioreactive.ui.viewmodel.VisualizerViewModel.VisualizerIntent.Updat
 import com.audioreactive.ui.viewmodel.VisualizerViewModel.VisualizerIntent.UpdateVolumeIntent
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 
 class MainActivity : ComponentActivity() {
     private var audioService: AudioCaptureService? = null
@@ -58,6 +80,7 @@ class MainActivity : ComponentActivity() {
             audioService?.registerListener(serviceListener)
             observeSpectrum()
         }
+
         override fun onServiceDisconnected(name: ComponentName?) {
             println("Service disconnected via connection")
             audioService?.unregisterListener(serviceListener)
@@ -81,18 +104,20 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val serviceListener: AudioCaptureService.ServiceEventListener  = object : AudioCaptureService.ServiceEventListener {
-        override fun onCaptureStopped() {
-            runOnUiThread {
-                println("Capture stopped, unbinding")
-                unbindService(serviceConnection)
+    private val serviceListener: AudioCaptureService.ServiceEventListener =
+        object : AudioCaptureService.ServiceEventListener {
+            override fun onCaptureStopped() {
+                runOnUiThread {
+                    println("Capture stopped, unbinding")
+                    unbindService(serviceConnection)
+                }
             }
         }
-    }
 
     private fun enableFullScreen() {
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        windowInsetsController.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
     }
 
@@ -108,6 +133,7 @@ class MainActivity : ComponentActivity() {
             AudioReactiveTheme {
                 val navController = rememberNavController()
                 val drawerState = rememberDrawerState(DrawerValue.Closed)
+                val scope = rememberCoroutineScope()
 
                 ModalNavigationDrawer(
                     drawerState = drawerState,
@@ -117,31 +143,46 @@ class MainActivity : ComponentActivity() {
                             StartAudioCaptureButton {
                                 requestScreenCaptureAndStartService()
                             }
-                            SelectFileButton { filePickerLauncher.launch(arrayOf("audio/*")) }
-                            // Moved play button into floation action and added settings screen
-                            Button(onClick = { navController.navigate("settings") }) {
+                            SelectFileButton {
+                                filePickerLauncher.launch(arrayOf("audio/*"))
+                            }
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        drawerState.close()
+                                    }
+                                    navController.navigate("settings")
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                            ) {
                                 Text("Settings")
                             }
                         }
                     }
                 ) {
                     NavHost(navController = navController, startDestination = "home") {
-                        // Added settings and home screens
                         composable("home") {
                             Scaffold(
                                 modifier = Modifier.fillMaxSize(),
                                 containerColor = Color.Black,
-                                floatingActionButton = {
-                                    val isPlaying by audioPlayerViewModel.isPlaying
-                                    FloatingActionButton(onClick = { audioPlayerViewModel.togglePlayback() }) {
-                                        Icon(
-                                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                            contentDescription = "PlayPause"
-                                        )
+                                bottomBar = {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .navigationBarsPadding()
+                                            .padding(bottom = 16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        MediaControlBar(audioPlayerViewModel = audioPlayerViewModel)
                                     }
                                 }
                             ) { innerPadding ->
-                                Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(innerPadding)
+                                ) {
                                     VisualizerScreen(visualizerViewModel.state.value.spectrum)
                                     VisualizerLattice(
                                         modifier = Modifier.fillMaxSize(),
@@ -151,8 +192,11 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }
+
                         composable("settings") {
-                            SettingsScreen(onBack = { navController.popBackStack() })
+                            SettingsScreen(
+                                onBack = { navController.popBackStack() }
+                            )
                         }
                     }
                 }
@@ -228,5 +272,45 @@ class MainActivity : ComponentActivity() {
         println("Stopped, isFinishing is $isFinishing")
         audioPlayerViewModel.pause()
         super.onStop()
+    }
+}
+
+@Composable
+fun MediaControlBar(audioPlayerViewModel: AudioPlayerViewModel) {
+    val isPlaying by audioPlayerViewModel.isPlaying
+
+    Surface(
+        modifier = Modifier.wrapContentWidth(),
+        shape = RoundedCornerShape(32.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        tonalElevation = 8.dp,
+        shadowElevation = 8.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { audioPlayerViewModel.playPrevious() }) {
+                Icon(
+                    imageVector = Icons.Default.SkipPrevious,
+                    contentDescription = "Previous Song"
+                )
+            }
+
+            IconButton(onClick = { audioPlayerViewModel.togglePlayback() }) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = "Play/Pause"
+                )
+            }
+
+            IconButton(onClick = { audioPlayerViewModel.playNext() }) {
+                Icon(
+                    imageVector = Icons.Default.SkipNext,
+                    contentDescription = "Next Song"
+                )
+            }
+        }
     }
 }

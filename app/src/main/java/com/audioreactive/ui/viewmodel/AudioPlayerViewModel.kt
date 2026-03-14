@@ -61,4 +61,24 @@ class AudioPlayerViewModel(application: Application) : AndroidViewModel(applicat
         _player.release()
         super.onCleared()
     }
+
+    fun playPrevious() {
+        if (_player.mediaItemCount > 0) {
+            if (_player.hasPreviousMediaItem()) {
+                _player.seekToPreviousMediaItem()
+            } else {
+                _player.seekTo(0)
+            }
+            _player.play()
+        }
+    }
+
+    fun playNext() {
+        if (_player.mediaItemCount > 0) {
+            if (_player.hasNextMediaItem()) {
+                _player.seekToNextMediaItem()
+                _player.play()
+            }
+        }
+    }
 }
