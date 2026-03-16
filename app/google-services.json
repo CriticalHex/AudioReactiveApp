@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "533922940383",
+    "project_id": "audioreactive-25992",
+    "storage_bucket": "audioreactive-25992.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:533922940383:android:d595f2c484559ab8dcf06a",
+        "android_client_info": {
+          "package_name": "com.audioreactive"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAwrZ-oEpU5sItq3pSuj6SESDe94hdOLtg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
