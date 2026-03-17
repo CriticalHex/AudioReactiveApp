@@ -183,13 +183,14 @@ class MainActivity : ComponentActivity() {
                                         .fillMaxSize()
                                         .padding(innerPadding)
                                 ) {
-                                    VisualizerScreen(visualizerViewModel.state.value.spectrum)
-                                    VisualizerLattice(
-                                        modifier = Modifier.fillMaxSize(),
-                                        vm = latticeViewModel,
-                                        volume = visualizerViewModel.state.value.volume
-                                    )
+
                                 }
+                                VisualizerScreen(visualizerViewModel.state.value.spectrum)
+                                VisualizerLattice(
+                                    modifier = Modifier.fillMaxSize(),
+                                    vm = latticeViewModel,
+                                    volume = visualizerViewModel.state.value.volume
+                                )
                             }
                         }
 
@@ -231,7 +232,7 @@ class MainActivity : ComponentActivity() {
 
     private fun observeSpectrum() {
         lifecycleScope.launch {
-            audioService?.volumeFlow()?.sample(1000)?.collect { v ->
+            audioService?.volumeFlow()?.sample(10)?.collect { v ->
 //                Log.d("VOLUME", "volume=${"%.3f".format(v)}")
                 visualizerViewModel.handleIntent(UpdateVolumeIntent(v))
             }
