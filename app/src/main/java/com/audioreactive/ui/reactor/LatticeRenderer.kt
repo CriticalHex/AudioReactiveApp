@@ -1,5 +1,6 @@
 package com.audioreactive.ui.reactor
 
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -12,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
+import kotlin.math.pow
 
 fun DrawScope.drawLatticeLines(l: lattice, maxLines: Int = 1100, strokeWidth: Float = 1f) {
     val pts = l.getProjectedPoints()
@@ -52,6 +54,7 @@ fun AnimatedLatticeDisplay(
     timeProvider: ((Long) -> Double)? = null
 ) {
     var frame by remember { mutableStateOf(0L) }
+    var peakVolume by remember { mutableStateOf(0.001f) }
     val latestVolume by rememberUpdatedState(volume)
 
     LaunchedEffect(l, timeScale, timeProvider) {
@@ -61,8 +64,12 @@ fun AnimatedLatticeDisplay(
             val t = timeProvider?.invoke(now)
                 ?: (((now - start) / 1_000_000_000.0) * timeScale)
 
-            l.update(t, latestVolume.toDouble())
-            frame = now
+            val v = latestVolume
+            if (v > peakVolume) peakVolume = v
+            val normalized = (v / peakVolume).coerceIn(0f, 1f)
+            val curved = normalized.pow(4f)
+
+            l.update(t, curved.toDouble())
         }
     }
 

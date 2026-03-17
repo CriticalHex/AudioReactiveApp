@@ -130,14 +130,14 @@ class AudioCaptureService : Service() {
         captureThread = Thread {
             Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO)
 
-            val buffer = FloatArray(bufferSize / 4)
+            val buffer = FloatArray(2048) // 2048 instead
 
             while (running) {
                 val read = audioRecord.read(
                     buffer,
                     0,
                     buffer.size,
-                    AudioRecord.READ_NON_BLOCKING
+                    AudioRecord.READ_BLOCKING // read blocking instead
                 )
                 if (read > 0) {
                     audioQueue.offer(buffer.copyOf(read))

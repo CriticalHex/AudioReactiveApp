@@ -13,8 +13,10 @@ import java.util.concurrent.BlockingQueue
 import kotlin.math.abs
 import kotlin.math.atan
 import kotlin.math.cos
+import kotlin.math.ln1p
 import kotlin.math.log10
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.sqrt
 
 class AudioProcessor(
@@ -32,14 +34,34 @@ class AudioProcessor(
     }
 
     private val fftBuffer = FloatArray(fftSize * 2)
-    private val smooth = FloatArray(fftSize / 2)
+    private val NUM_BINS = 96
+    private val MIN_FREQ = 20f
+    private val MAX_FREQ = 20000f
+    private val SAMPLE_RATE = 48000f
+    private val freqPerBin = SAMPLE_RATE / fftSize
 
-    private val _spectrumFlow =
-        MutableStateFlow(FloatArray(fftSize / 2) { SILENCE_DB }) // Initialize to -120 DB
+    private val _spectrumFlow = MutableStateFlow(FloatArray(NUM_BINS) { SILENCE_DB })
     private val _volumeFlow = MutableStateFlow(0f)
 
     val spectrumFlow = _spectrumFlow.asStateFlow()
     val volumeFlow = _volumeFlow.asStateFlow()
+
+
+
+    private fun mapToLogBins(mags: FloatArray): FloatArray {
+        val result = FloatArray(NUM_BINS)
+        val ratio = MAX_FREQ / MIN_FREQ
+        for (i in 0 until NUM_BINS) {
+            val freq = MIN_FREQ * 10.0.pow((i.toDouble() / (NUM_BINS - 1)) * log10(ratio.toDouble()))
+                .toFloat()
+            val fftIndex = freq / freqPerBin
+            val indexLow = fftIndex.toInt().coerceAtMost(mags.size - 1)
+            val indexHigh = (indexLow + 1).coerceAtMost(mags.size - 1)
+            val fraction = fftIndex - indexLow
+            result[i] = (1f - fraction) * mags[indexLow] + fraction * mags[indexHigh]
+        }
+        return result
+    }
 
     fun start() {
         scope.launch {
@@ -55,12 +77,22 @@ class AudioProcessor(
         scope.cancel()
     }
 
-    private fun normalizedRmsVolume(samples: FloatArray): Float {
-        // because the samples are magnitudes, this averages then puts them on a log scale.
-        // test it out, see what works best for the lattice
-        val rms = samples.sumOf { it.toDouble() * it.toDouble() } / samples.size.toDouble()
-        val decibels = 20 * log10(rms + 1e-9f)
-        return ((decibels + 60.0) / 60.0).coerceIn(0.0, 1.0).toFloat()
+    private var maxVolume = 1f
+    private val alpha = 0.02f
+
+    private fun normalizeVolume(volumes: FloatArray) {
+        val currentMax = volumes.maxOrNull() ?: 0f
+        if (currentMax > maxVolume) {
+            maxVolume = currentMax
+        } else {
+            maxVolume *= 0.999f
+        }
+        if (maxVolume > 0f) {
+            val denom = ln1p((alpha * maxVolume).toDouble()).toFloat()
+            for (i in volumes.indices) {
+                volumes[i] = ln1p((alpha * volumes[i]).toDouble()).toFloat() / denom
+            }
+        }
     }
 
     private fun smoothedPeakVolume(samples: FloatArray): Float {
@@ -79,9 +111,8 @@ class AudioProcessor(
 
     private fun process(samples: FloatArray) {
         val n = min(samples.size, fftSize)
-
         for (i in 0 until n) fftBuffer[i] = samples[i] * window[i]
-        for (i in n until fftSize) fftBuffer[i] = 0f
+        for (i in n until fftSize * 2) fftBuffer[i] = 0f // imaginary numbers issue
 
         fft.realForwardFull(fftBuffer)
 
@@ -89,12 +120,11 @@ class AudioProcessor(
         for (i in mags.indices) {
             val re = fftBuffer[2 * i]
             val im = fftBuffer[2 * i + 1]
-            val mag = sqrt(re * re + im * im)
-            val db = (20 * log10(mag + 1e-6f)).toFloat()
-            smooth[i] = smooth[i] * 0.8f + db * 0.2f
-            mags[i] = smooth[i]
+            mags[i] = sqrt(re * re + im * im)
         }
 
-        _spectrumFlow.value = mags
+        val bins = mapToLogBins(mags)
+        normalizeVolume(bins)
+        _spectrumFlow.value = bins
     }
 }

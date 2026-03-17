@@ -312,11 +312,13 @@ class lattice(
     private val _projectedPoints: Array<Offset> = Array(100) {Offset.Zero}
 
     private var position: Offset = Offset(x.toFloat(), y.toFloat())
+    private var speed: Double = 0.5
 
     fun getColor(): Color = color
     fun getProjectedPoints(): Array<Offset> = _projectedPoints
 
     private fun computeProjectedVectors(time: Double) {
+        val time = time * speed
         for (i in 0 until 24) {
             when (elevenCycle[i][0]) {
                 0 -> {
@@ -343,9 +345,11 @@ class lattice(
         }
     }
 
+
+
     private fun computeProjectedPoints(volume: Double) {
         val base = minOf(width, height).toFloat() / 5f
-        val scale = base * (1f + volume.toFloat().coerceIn(0f, 2f))
+        val scale = base * (1f - volume.toFloat().coerceIn(0f, 0.3f))
 
         for (i in 0 until 100) {
             var u = 0.0
@@ -383,11 +387,7 @@ class lattice(
 
 
 
-//    fun update(time: Double) {
-//        computeProjectedVectors(time)
-//        computeProjectedPoints()
-//        color = computeColor(time)
-//    }
+
 
     fun update(time: Double, volume: Double = 0.0) {
         computeProjectedVectors(time)
@@ -397,15 +397,6 @@ class lattice(
 
     fun setPosition(p: Offset) { position = p }
 
-
-
-
-    fun update(time: Double, volumeBands: List<Float>) {
-        computeProjectedVectors(time)
-        val v = volumeBands.getOrNull(frequencyBand) ?: 0f
-        computeProjectedPoints(smooth(v))
-        color = computeColor(time)
-    }
 
 
 }

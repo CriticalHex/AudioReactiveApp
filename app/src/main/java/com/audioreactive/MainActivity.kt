@@ -73,6 +73,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var visualizerViewModel: VisualizerViewModel
     private lateinit var latticeViewModel: LatticeViewModel
 
+
+
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             audioService = (binder as AudioCaptureService.LocalBinder).getService()
@@ -163,6 +165,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     NavHost(navController = navController, startDestination = "home") {
                         composable("home") {
+                            val vizState by visualizerViewModel.state
                             Scaffold(
                                 modifier = Modifier.fillMaxSize(),
                                 containerColor = Color.Black,
@@ -185,11 +188,15 @@ class MainActivity : ComponentActivity() {
                                 ) {
 
                                 }
-                                VisualizerScreen(visualizerViewModel.state.value.spectrum)
+                                VisualizerScreen(vizState.spectrum)
+
+
+// then pass:
+
                                 VisualizerLattice(
                                     modifier = Modifier.fillMaxSize(),
                                     vm = latticeViewModel,
-                                    volume = visualizerViewModel.state.value.volume
+                                    volume = vizState.volume
                                 )
                             }
                         }
@@ -240,9 +247,9 @@ class MainActivity : ComponentActivity() {
 
         lifecycleScope.launch {
             audioService?.spectrumFlow()?.collect { bands ->
-                Log.d("SPECTRUM", bands.joinToString {
-                    "%.3f".format(it)
-                })
+//                Log.d("SPECTRUM", bands.joinToString {
+//                    "%.3f".format(it)
+//                })
                 visualizerViewModel.handleIntent(UpdateSpectrumIntent(bands))
             }
         }
