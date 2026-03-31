@@ -1,15 +1,16 @@
 package com.audioreactive
 
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.jtransforms.fft.FloatFFT_1D
-import java.util.concurrent.BlockingQueue
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.abs
 import kotlin.math.atan
 import kotlin.math.cos
@@ -20,25 +21,26 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 
 class AudioProcessor(
-    private val inputQueue: BlockingQueue<FloatArray>
+    private val audioChannel: Channel<FloatArray>
 ) {
-    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-
-    private val SILENCE_DB = -120f
-
-    private val fftSize = 2048
-    private val fft = FloatFFT_1D(fftSize.toLong())
-
-    private val window = FloatArray(fftSize) {
-        (0.5f * (1 - cos(2 * Math.PI * it / (fftSize - 1)))).toFloat()
+    companion object {
+        private const val LOG_TAG = "AR.AudioProcessor"
+        private const val SILENCE_DB = -120f
+        private const val FFT_SIZE = 2048
+        private const val NUM_BINS = 96
+        private const val MIN_FREQ = 20f
+        private const val MAX_FREQ = 20000f
+        private const val SAMPLE_RATE = 48000f
+        private const val FREQ_PER_BIN = SAMPLE_RATE / FFT_SIZE
     }
+    private var jobScope = SupervisorJob()
+    private var scope = CoroutineScope(Dispatchers.Default + jobScope)
 
-    private val fftBuffer = FloatArray(fftSize * 2)
-    private val NUM_BINS = 96
-    private val MIN_FREQ = 20f
-    private val MAX_FREQ = 20000f
-    private val SAMPLE_RATE = 48000f
-    private val freqPerBin = SAMPLE_RATE / fftSize
+    private val fft = FloatFFT_1D(FFT_SIZE.toLong())
+    private val window = FloatArray(FFT_SIZE) {
+        (0.5f * (1 - cos(2 * Math.PI * it / (FFT_SIZE - 1)))).toFloat()
+    }
+    private val fftBuffer = FloatArray(FFT_SIZE * 2)
 
     private val _spectrumFlow = MutableStateFlow(FloatArray(NUM_BINS) { SILENCE_DB })
     private val _volumeFlow = MutableStateFlow(0f)
@@ -46,7 +48,33 @@ class AudioProcessor(
     val spectrumFlow = _spectrumFlow.asStateFlow()
     val volumeFlow = _volumeFlow.asStateFlow()
 
+    private fun createScope() {
+        jobScope = SupervisorJob()
+        scope = CoroutineScope(Dispatchers.Default + jobScope)
+    }
 
+    fun start() {
+        createScope()
+        scope.launch {
+            Log.d(LOG_TAG, "Starting the audio processor")
+            try {
+                while (isActive) {
+                    val samples = audioChannel.receive()
+                    process(samples)
+                    processVolume(samples)
+                }
+            } catch (e: CancellationException) {
+                Log.d(LOG_TAG, "Audio processor cancelled")
+            } finally {
+                Log.d(LOG_TAG, "Audio processor stopped")
+            }
+        }
+    }
+
+    fun stop() {
+        Log.d(LOG_TAG, "Cancelling job")
+        jobScope.cancel()
+    }
 
     private fun mapToLogBins(mags: FloatArray): FloatArray {
         val result = FloatArray(NUM_BINS)
@@ -54,27 +82,13 @@ class AudioProcessor(
         for (i in 0 until NUM_BINS) {
             val freq = MIN_FREQ * 10.0.pow((i.toDouble() / (NUM_BINS - 1)) * log10(ratio.toDouble()))
                 .toFloat()
-            val fftIndex = freq / freqPerBin
+            val fftIndex = freq / FREQ_PER_BIN
             val indexLow = fftIndex.toInt().coerceAtMost(mags.size - 1)
             val indexHigh = (indexLow + 1).coerceAtMost(mags.size - 1)
             val fraction = fftIndex - indexLow
             result[i] = (1f - fraction) * mags[indexLow] + fraction * mags[indexHigh]
         }
         return result
-    }
-
-    fun start() {
-        scope.launch {
-            while (isActive) {
-                val samples = inputQueue.take()
-                process(samples)
-                processVolume(samples)
-            }
-        }
-    }
-
-    fun stop() {
-        scope.cancel()
     }
 
     private var maxVolume = 1f
@@ -88,9 +102,9 @@ class AudioProcessor(
             maxVolume *= 0.999f
         }
         if (maxVolume > 0f) {
-            val denom = ln1p((alpha * maxVolume).toDouble()).toFloat()
+            val denominator = ln1p((alpha * maxVolume).toDouble()).toFloat()
             for (i in volumes.indices) {
-                volumes[i] = ln1p((alpha * volumes[i]).toDouble()).toFloat() / denom
+                volumes[i] = ln1p((alpha * volumes[i]).toDouble()).toFloat() / denominator
             }
         }
     }
@@ -110,13 +124,13 @@ class AudioProcessor(
     }
 
     private fun process(samples: FloatArray) {
-        val n = min(samples.size, fftSize)
+        val n = min(samples.size, FFT_SIZE)
         for (i in 0 until n) fftBuffer[i] = samples[i] * window[i]
-        for (i in n until fftSize * 2) fftBuffer[i] = 0f // imaginary numbers issue
+        for (i in n until FFT_SIZE * 2) fftBuffer[i] = 0f // imaginary numbers issue
 
         fft.realForwardFull(fftBuffer)
 
-        val mags = FloatArray(fftSize / 2)
+        val mags = FloatArray(FFT_SIZE / 2)
         for (i in mags.indices) {
             val re = fftBuffer[2 * i]
             val im = fftBuffer[2 * i + 1]

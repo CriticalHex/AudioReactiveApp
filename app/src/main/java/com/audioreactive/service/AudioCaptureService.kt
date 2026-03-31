@@ -2,7 +2,7 @@ package com.audioreactive.service
 
 import android.Manifest
 import android.R.drawable.ic_media_play
-import android.app.Activity
+import android.app.Activity.RESULT_OK
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -20,15 +20,16 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.Process
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.audioreactive.AudioProcessor
-import java.util.concurrent.ArrayBlockingQueue
+import kotlinx.coroutines.channels.Channel
 
 class AudioCaptureService : Service() {
 
     companion object {
-        const val EXTRA_RESULT_CODE = "result_code"
-        const val EXTRA_DATA = "data"
+        private const val LOG_TAG = "AR.AudioCaptureService"
+        const val EXTRA_DATA = "com.audioreactive.service.data"
         private const val CHANNEL_ID = "media_projection"
 
         private object CaptureConfig {
@@ -38,64 +39,41 @@ class AudioCaptureService : Service() {
         }
     }
 
-    interface ServiceEventListener {
-        fun onCaptureStopped()
-    }
-
-    private val listeners = mutableSetOf<ServiceEventListener>()
-
-    fun registerListener(listener: ServiceEventListener) {
-        listeners += listener
-    }
-
-    fun unregisterListener(listener: ServiceEventListener) {
-        listeners -= listener
-    }
-
-    private fun notifyCaptureStopped() {
-        listeners.forEach { it.onCaptureStopped() }
-    }
-
     private lateinit var mediaProjection: MediaProjection
     private lateinit var audioRecord: AudioRecord
-    private val audioQueue = ArrayBlockingQueue<FloatArray>(3)
-    private val processor = AudioProcessor(audioQueue)
+    private val audioChannel = Channel<FloatArray>(3)
+    private var processor = AudioProcessor(audioChannel)
     private var captureThread: Thread? = null
     @Volatile private var running = false
 
     private val projectionCallback = object : MediaProjection.Callback() {
         override fun onStop() {
-            println("Media projection stopped")
-            notifyCaptureStopped()
+            Log.d(LOG_TAG, "Media projection stopped")
             stopCaptureAndSelf()
         }
     }
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        println("Service started!!")
+        Log.d(LOG_TAG, "Service started")
 
-        startForeground(1, createNotification(),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
+        startForeground(1, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
 
-        if (::mediaProjection.isInitialized) {
-            return START_STICKY
-        }
-
-        val resultCode = intent?.getIntExtra(EXTRA_RESULT_CODE, Activity.RESULT_CANCELED)
-            ?: return START_NOT_STICKY
-        val data = intent.getParcelableExtra(EXTRA_DATA, Intent::class.java)
+        val data = intent?.getParcelableExtra(EXTRA_DATA, Intent::class.java)
             ?: return START_NOT_STICKY
 
         val projectionManager = getSystemService(MediaProjectionManager::class.java)
-        mediaProjection = projectionManager.getMediaProjection(resultCode, data) ?: return START_NOT_STICKY
+        mediaProjection = projectionManager.getMediaProjection(RESULT_OK, data) ?: return START_NOT_STICKY
 
         mediaProjection.registerCallback(projectionCallback, Handler(Looper.getMainLooper()))
 
-        startCapture()
-        processor.start()
+        if (!running) {
+            Log.d(LOG_TAG, "Starting capture")
+            startCapture()
+            processor.start()
+        }
 
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
@@ -130,19 +108,20 @@ class AudioCaptureService : Service() {
         captureThread = Thread {
             Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO)
 
-            val buffer = FloatArray(2048) // 2048 instead
+            val buffer = FloatArray(2048)
 
             while (running) {
                 val read = audioRecord.read(
                     buffer,
                     0,
                     buffer.size,
-                    AudioRecord.READ_BLOCKING // read blocking instead
+                    AudioRecord.READ_BLOCKING
                 )
                 if (read > 0) {
-                    audioQueue.offer(buffer.copyOf(read))
+                    audioChannel.trySend(buffer.copyOf(read))
                 }
             }
+            Log.d(LOG_TAG, "Capture thread stopped")
         }.apply { start() }
     }
 
@@ -150,7 +129,7 @@ class AudioCaptureService : Service() {
     fun volumeFlow() = processor.volumeFlow
 
     private fun stopCaptureAndSelf() {
-        println("Stopping self. Running was: $running")
+        Log.d(LOG_TAG, "Stopping self. Running was: $running")
         if (!running) return
 
         running = false
@@ -169,8 +148,15 @@ class AudioCaptureService : Service() {
         stopSelf()
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        Log.d(LOG_TAG, "App swiped away, shutting down service")
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
     override fun onDestroy() {
-        println("SERVICE DESTROYED!!")
+        Log.d(LOG_TAG, "SERVICE DESTROYED!!")
         running = false
         captureThread?.interrupt()
         captureThread = null
@@ -195,7 +181,7 @@ class AudioCaptureService : Service() {
     override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onUnbind(intent: Intent?): Boolean {
-        println("Unbound service!")
+        Log.d(LOG_TAG, "Unbound service!")
         return super.onUnbind(intent)
     }
 

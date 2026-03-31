@@ -68,6 +68,9 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 
 class MainActivity : ComponentActivity() {
+    companion object {
+        private const val LOG_TAG: String = "AR.MainActivity"
+    }
     private var audioService: AudioCaptureService? = null
     private lateinit var audioPlayerViewModel: AudioPlayerViewModel
     private lateinit var visualizerViewModel: VisualizerViewModel
@@ -78,21 +81,19 @@ class MainActivity : ComponentActivity() {
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             audioService = (binder as AudioCaptureService.LocalBinder).getService()
-            println("Service bound via connection")
-            audioService?.registerListener(serviceListener)
+            Log.d(LOG_TAG, "Service bound via connection")
             observeSpectrum()
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
-            println("Service disconnected via connection")
-            audioService?.unregisterListener(serviceListener)
+            Log.d(LOG_TAG, "Service disconnected via connection")
             audioService = null
         }
     }
 
     private val projectionLauncher = registerForActivityResult(StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK && result.data != null) {
-            startAudioService(result.resultCode, result.data!!)
+            startAudioService(result.data!!)
         }
     }
 
@@ -105,16 +106,6 @@ class MainActivity : ComponentActivity() {
             audioPlayerViewModel.loadAudio(it)
         }
     }
-
-    private val serviceListener: AudioCaptureService.ServiceEventListener =
-        object : AudioCaptureService.ServiceEventListener {
-            override fun onCaptureStopped() {
-                runOnUiThread {
-                    println("Capture stopped, unbinding")
-                    unbindService(serviceConnection)
-                }
-            }
-        }
 
     private fun enableFullScreen() {
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
@@ -190,9 +181,6 @@ class MainActivity : ComponentActivity() {
                                 }
                                 VisualizerScreen(vizState.spectrum)
 
-
-// then pass:
-
                                 VisualizerLattice(
                                     modifier = Modifier.fillMaxSize(),
                                     vm = latticeViewModel,
@@ -223,12 +211,11 @@ class MainActivity : ComponentActivity() {
         projectionLauncher.launch(mgr.createScreenCaptureIntent())
     }
 
-    private fun startAudioService(resultCode: Int, data: Intent) {
+    private fun startAudioService(data: Intent) {
         val intent = Intent(this, AudioCaptureService::class.java).apply {
-            putExtra(AudioCaptureService.EXTRA_RESULT_CODE, resultCode)
             putExtra(AudioCaptureService.EXTRA_DATA, data)
         }
-        println("Starting foreground service")
+        Log.d(LOG_TAG, "Starting foreground service")
         startForegroundService(intent)
         bindService(
             Intent(this, AudioCaptureService::class.java),
@@ -240,44 +227,25 @@ class MainActivity : ComponentActivity() {
     private fun observeSpectrum() {
         lifecycleScope.launch {
             audioService?.volumeFlow()?.sample(10)?.collect { v ->
-//                Log.d("VOLUME", "volume=${"%.3f".format(v)}")
                 visualizerViewModel.handleIntent(UpdateVolumeIntent(v))
             }
         }
 
         lifecycleScope.launch {
             audioService?.spectrumFlow()?.collect { bands ->
-//                Log.d("SPECTRUM", bands.joinToString {
-//                    "%.3f".format(it)
-//                })
                 visualizerViewModel.handleIntent(UpdateSpectrumIntent(bands))
             }
         }
     }
 
     override fun onDestroy() {
+        Log.d(LOG_TAG, "Destroying activity")
         unbindService(serviceConnection)
         super.onDestroy()
     }
 
-    override fun onPause() {
-        println("Paused")
-        super.onPause()
-    }
-
-    override fun onResume() {
-        audioPlayerViewModel.play()
-        println("Resumed")
-        super.onResume()
-    }
-
-    override fun onRestart() {
-        println("Restarted")
-        super.onRestart()
-    }
-
     override fun onStop() {
-        println("Stopped, isFinishing is $isFinishing")
+        Log.d(LOG_TAG, "Stopped, isFinishing is $isFinishing")
         audioPlayerViewModel.pause()
         super.onStop()
     }
