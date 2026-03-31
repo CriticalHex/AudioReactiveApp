@@ -3,19 +3,23 @@ package com.audioreactive.ui.screens
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
-import com.audioreactive.ui.viewmodel.LatticeViewModel
 import com.audioreactive.ui.reactor.AnimatedLatticeDisplay
 import com.audioreactive.ui.reactor.lattice
+import com.audioreactive.ui.viewmodel.LatticeViewModel
+import com.audioreactive.ui.viewmodel.intent.LatticeIntent
 
 @Composable
 fun VisualizerLattice(
     modifier: Modifier = Modifier,
-    vm: LatticeViewModel,
+    latticeViewModel: LatticeViewModel,
     volume: Float
 ) {
+    val state = latticeViewModel.stateFlow.collectAsState()
+
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val density = LocalDensity.current
         val wPx = with(density) { maxWidth.toPx() }
@@ -35,7 +39,10 @@ fun VisualizerLattice(
             l = l,
             modifier = Modifier.fillMaxSize(),
             strokeWidth = 1f,
-            timeProvider = { now: Long -> vm.timeSeconds(now) },
+            timeProvider = { now: Long ->
+                latticeViewModel.dispatcher.invoke(LatticeIntent.CalculateTime(now))
+                state.value.timeInSeconds
+           },
             timeScale = 1.0,
             volume = volume
         )

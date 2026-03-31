@@ -38,7 +38,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -59,13 +60,13 @@ import com.audioreactive.ui.screens.VisualizerLattice
 import com.audioreactive.ui.screens.VisualizerScreen
 import com.audioreactive.ui.theme.AudioReactiveTheme
 import com.audioreactive.ui.viewmodel.AudioPlayerViewModel
+import com.audioreactive.ui.viewmodel.AudioReactiveViewModelFactory
 import com.audioreactive.ui.viewmodel.LatticeViewModel
 import com.audioreactive.ui.viewmodel.VisualizerViewModel
-import com.audioreactive.ui.viewmodel.VisualizerViewModel.VisualizerIntent.UpdateSpectrumIntent
-import com.audioreactive.ui.viewmodel.VisualizerViewModel.VisualizerIntent.UpdateVolumeIntent
+import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent
+import com.audioreactive.ui.viewmodel.intent.VisualizerIntent
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.rememberCoroutineScope
 
 class MainActivity : ComponentActivity() {
     companion object {
@@ -103,7 +104,7 @@ class MainActivity : ComponentActivity() {
                 it,
                 Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
-            audioPlayerViewModel.loadAudio(it)
+            audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.LoadAudio(it))
         }
     }
 
@@ -116,9 +117,30 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        audioPlayerViewModel = ViewModelProvider(this)[AudioPlayerViewModel::class.java]
-        visualizerViewModel = ViewModelProvider(this)[VisualizerViewModel::class.java]
-        latticeViewModel = ViewModelProvider(this)[LatticeViewModel::class.java]
+        audioPlayerViewModel = ViewModelProvider(
+            store = this.viewModelStore,
+            factory = AudioReactiveViewModelFactory(),
+            defaultCreationExtras = AudioReactiveViewModelFactory.creationExtras(
+                this.defaultViewModelCreationExtras,
+                this
+            )
+        )[AudioPlayerViewModel::class]
+        visualizerViewModel = ViewModelProvider(
+            store = this.viewModelStore,
+            factory = AudioReactiveViewModelFactory(),
+            defaultCreationExtras = AudioReactiveViewModelFactory.creationExtras(
+                this.defaultViewModelCreationExtras,
+                this
+            )
+        )[VisualizerViewModel::class]
+        latticeViewModel = ViewModelProvider(
+            store = this.viewModelStore,
+            factory = AudioReactiveViewModelFactory(),
+            defaultCreationExtras = AudioReactiveViewModelFactory.creationExtras(
+                this.defaultViewModelCreationExtras,
+                this
+            )
+        )[LatticeViewModel::class]
 
         enableFullScreen()
 
@@ -156,7 +178,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     NavHost(navController = navController, startDestination = "home") {
                         composable("home") {
-                            val vizState by visualizerViewModel.state
+                            val state = visualizerViewModel.stateFlow.collectAsState()
                             Scaffold(
                                 modifier = Modifier.fillMaxSize(),
                                 containerColor = Color.Black,
@@ -179,12 +201,12 @@ class MainActivity : ComponentActivity() {
                                 ) {
 
                                 }
-                                VisualizerScreen(vizState.spectrum)
+                                VisualizerScreen(state.value.spectrum)
 
                                 VisualizerLattice(
                                     modifier = Modifier.fillMaxSize(),
-                                    vm = latticeViewModel,
-                                    volume = vizState.volume
+                                    latticeViewModel = latticeViewModel,
+                                    volume = state.value.volume
                                 )
                             }
                         }
@@ -226,14 +248,14 @@ class MainActivity : ComponentActivity() {
 
     private fun observeSpectrum() {
         lifecycleScope.launch {
-            audioService?.volumeFlow()?.sample(10)?.collect { v ->
-                visualizerViewModel.handleIntent(UpdateVolumeIntent(v))
+            audioService?.volumeFlow()?.sample(10)?.collect { volume ->
+                visualizerViewModel.dispatcher.invoke(VisualizerIntent.UpdateVolume(volume))
             }
         }
 
         lifecycleScope.launch {
-            audioService?.spectrumFlow()?.collect { bands ->
-                visualizerViewModel.handleIntent(UpdateSpectrumIntent(bands))
+            audioService?.spectrumFlow()?.collect { spectrum ->
+                visualizerViewModel.dispatcher.invoke(VisualizerIntent.UpdateSpectrum(spectrum))
             }
         }
     }
@@ -245,15 +267,15 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
-        Log.d(LOG_TAG, "Stopped, isFinishing is $isFinishing")
-        audioPlayerViewModel.pause()
         super.onStop()
+        Log.d(LOG_TAG, "Stopped, isFinishing is $isFinishing")
+        audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.Pause)
     }
 }
 
 @Composable
 fun MediaControlBar(audioPlayerViewModel: AudioPlayerViewModel) {
-    val isPlaying by audioPlayerViewModel.isPlaying
+    val state = audioPlayerViewModel.stateFlow.collectAsState()
 
     Surface(
         modifier = Modifier.wrapContentWidth(),
@@ -267,21 +289,21 @@ fun MediaControlBar(audioPlayerViewModel: AudioPlayerViewModel) {
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { audioPlayerViewModel.playPrevious() }) {
+            IconButton(onClick = { audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.Previous) }) {
                 Icon(
                     imageVector = Icons.Default.SkipPrevious,
                     contentDescription = "Previous Song"
                 )
             }
 
-            IconButton(onClick = { audioPlayerViewModel.togglePlayback() }) {
+            IconButton(onClick = { audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.TogglePlayback) }) {
                 Icon(
-                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    imageVector = if (state.value.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = "Play/Pause"
                 )
             }
 
-            IconButton(onClick = { audioPlayerViewModel.playNext() }) {
+            IconButton(onClick = { audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.Next) }) {
                 Icon(
                     imageVector = Icons.Default.SkipNext,
                     contentDescription = "Next Song"
