@@ -1,4 +1,4 @@
-package com.audioreactive.ui.screens
+package com.audioreactive.ui.components
 
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize

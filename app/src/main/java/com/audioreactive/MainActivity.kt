@@ -56,8 +56,8 @@ import com.audioreactive.service.AudioCaptureService
 import com.audioreactive.ui.components.SelectFileButton
 import com.audioreactive.ui.components.StartAudioCaptureButton
 import com.audioreactive.ui.screens.SettingsScreen
-import com.audioreactive.ui.screens.VisualizerLattice
-import com.audioreactive.ui.screens.VisualizerScreen
+import com.audioreactive.ui.components.VisualizerLattice
+import com.audioreactive.ui.components.VisualizerScreen
 import com.audioreactive.ui.theme.AudioReactiveTheme
 import com.audioreactive.ui.viewmodel.AudioPlayerViewModel
 import com.audioreactive.ui.viewmodel.AudioReactiveViewModelFactory

@@ -13,6 +13,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.audioreactive.ui.components.VisualizerLattice
+import com.audioreactive.ui.components.VisualizerScreen
 import com.audioreactive.ui.viewmodel.AudioPlayerViewModel
 import com.audioreactive.ui.viewmodel.LatticeViewModel
 import com.audioreactive.ui.viewmodel.VisualizerViewModel
