@@ -16,8 +16,6 @@ object SettingsScreenSpec : IScreenSpec {
         navController: NavHostController,
         navBackStackEntry: NavBackStackEntry
     ) {
-        SettingsScreen(
-            onBack = { navController.popBackStack() }
-        )
+        SettingsScreen()
     }
 }

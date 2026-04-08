@@ -1,5 +1,6 @@
 package com.audioreactive.ui.navigation.specs
 
+import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -20,9 +21,11 @@ object HomeScreenSpec : IScreenSpec {
         navController: NavHostController,
         navBackStackEntry: NavBackStackEntry
     ) {
-        val audioPlayerViewModel: AudioPlayerViewModel = viewModel()
-        val visualizerViewModel: VisualizerViewModel = viewModel()
-        val latticeViewModel: LatticeViewModel = viewModel()
+        val activity = navController.context as ComponentActivity
+
+        val audioPlayerViewModel: AudioPlayerViewModel = viewModel(activity)
+        val visualizerViewModel: VisualizerViewModel = viewModel(activity)
+        val latticeViewModel: LatticeViewModel = viewModel(activity)
 
         HomeScreen(
             audioPlayerViewModel = audioPlayerViewModel,

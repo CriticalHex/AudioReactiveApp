@@ -32,17 +32,6 @@ fun HomeScreen(
         containerColor = Color.Black,
         floatingActionButton = {
             val audioPlayerState = audioPlayerViewModel.stateFlow.collectAsState()
-            FloatingActionButton(
-                onClick = { audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.TogglePlayback) }
-            ) {
-                Icon(
-                    imageVector = if (audioPlayerState.value.isPlaying)
-                        Icons.Default.Pause
-                    else
-                        Icons.Default.PlayArrow,
-                    contentDescription = "PlayPause"
-                )
-            }
         }
     ) { padding ->
         Box(

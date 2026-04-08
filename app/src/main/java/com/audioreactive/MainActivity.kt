@@ -34,30 +34,34 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.audioreactive.service.AudioCaptureService
 import com.audioreactive.ui.components.SelectFileButton
 import com.audioreactive.ui.components.StartAudioCaptureButton
-import com.audioreactive.ui.screens.SettingsScreen
-import com.audioreactive.ui.components.VisualizerLattice
-import com.audioreactive.ui.components.VisualizerScreen
+import com.audioreactive.ui.navigation.AudioReactiveNavHost
+import com.audioreactive.ui.navigation.AudioReactiveTopBar
+import com.audioreactive.ui.navigation.SnackbarManager
+import com.audioreactive.ui.navigation.specs.IScreenSpec
 import com.audioreactive.ui.theme.AudioReactiveTheme
 import com.audioreactive.ui.viewmodel.AudioPlayerViewModel
 import com.audioreactive.ui.viewmodel.AudioReactiveViewModelFactory
@@ -72,12 +76,11 @@ class MainActivity : ComponentActivity() {
     companion object {
         private const val LOG_TAG: String = "AR.MainActivity"
     }
+
     private var audioService: AudioCaptureService? = null
     private lateinit var audioPlayerViewModel: AudioPlayerViewModel
     private lateinit var visualizerViewModel: VisualizerViewModel
     private lateinit var latticeViewModel: LatticeViewModel
-
-
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -117,6 +120,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         audioPlayerViewModel = ViewModelProvider(
             store = this.viewModelStore,
             factory = AudioReactiveViewModelFactory(),
@@ -125,6 +129,7 @@ class MainActivity : ComponentActivity() {
                 this
             )
         )[AudioPlayerViewModel::class]
+
         visualizerViewModel = ViewModelProvider(
             store = this.viewModelStore,
             factory = AudioReactiveViewModelFactory(),
@@ -133,6 +138,7 @@ class MainActivity : ComponentActivity() {
                 this
             )
         )[VisualizerViewModel::class]
+
         latticeViewModel = ViewModelProvider(
             store = this.viewModelStore,
             factory = AudioReactiveViewModelFactory(),
@@ -149,72 +155,98 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val drawerState = rememberDrawerState(DrawerValue.Closed)
                 val scope = rememberCoroutineScope()
+                val snackbarHostState = remember { SnackbarHostState() }
+
+                val backStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = backStackEntry?.destination?.route
+
+                val isSettingsScreen = currentRoute == IScreenSpec.SETTINGS
+                val isHomeScreen =
+                    currentRoute == IScreenSpec.HOME ||
+                            currentRoute == IScreenSpec.ROOT ||
+                            currentRoute == null
+
+                LaunchedEffect(Unit) {
+                    SnackbarManager.messages.collect { message ->
+                        snackbarHostState.showSnackbar(message)
+                    }
+                }
 
                 ModalNavigationDrawer(
                     drawerState = drawerState,
-                    gesturesEnabled = true,
+                    gesturesEnabled = isHomeScreen,
                     drawerContent = {
                         ModalDrawerSheet {
                             StartAudioCaptureButton {
                                 requestScreenCaptureAndStartService()
                             }
+
                             SelectFileButton {
                                 filePickerLauncher.launch(arrayOf("audio/*"))
                             }
+
                             Button(
                                 onClick = {
                                     scope.launch {
                                         drawerState.close()
                                     }
-                                    navController.navigate("settings")
+                                    navController.navigate(IScreenSpec.SETTINGS)
                                 },
-                                modifier = Modifier
-                                    .fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text("Settings")
                             }
                         }
                     }
                 ) {
-                    NavHost(navController = navController, startDestination = "home") {
-                        composable("home") {
-                            val state = visualizerViewModel.stateFlow.collectAsState()
+                    when {
+                        isSettingsScreen -> {
                             Scaffold(
                                 modifier = Modifier.fillMaxSize(),
-                                containerColor = Color.Black,
-                                bottomBar = {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .navigationBarsPadding()
-                                            .padding(bottom = 16.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        MediaControlBar(audioPlayerViewModel = audioPlayerViewModel)
-                                    }
+                                topBar = {
+                                    AudioReactiveTopBar(
+                                        title = "Settings",
+                                        canNavigateBack = true,
+                                        onBack = { navController.popBackStack() }
+                                    )
+                                },
+                                snackbarHost = {
+                                    SnackbarHost(hostState = snackbarHostState)
                                 }
                             ) { innerPadding ->
-                                Box(
+                                AudioReactiveNavHost(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .padding(innerPadding)
-                                ) {
-
-                                }
-                                VisualizerScreen(state.value.spectrum)
-
-                                VisualizerLattice(
-                                    modifier = Modifier.fillMaxSize(),
-                                    latticeViewModel = latticeViewModel,
-                                    volume = state.value.volume
+                                        .padding(innerPadding),
+                                    navController = navController
                                 )
                             }
                         }
 
-                        composable("settings") {
-                            SettingsScreen(
-                                onBack = { navController.popBackStack() }
-                            )
+                        else -> {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                AudioReactiveNavHost(
+                                    modifier = Modifier.fillMaxSize(),
+                                    navController = navController
+                                )
+
+                                SnackbarHost(
+                                    hostState = snackbarHostState,
+                                    modifier = Modifier
+                                        .align(Alignment.TopCenter)
+                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .navigationBarsPadding()
+                                        .padding(bottom = 16.dp)
+                                        .align(Alignment.BottomCenter),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    MediaControlBar(audioPlayerViewModel = audioPlayerViewModel)
+                                }
+                            }
                         }
                     }
                 }

@@ -11,24 +11,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.audioreactive.ui.navigation.AudioReactiveTopBar
 
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit,
     onColorSelected: (Color) -> Unit = {}
 ) {
     var hue by rememberSaveable { mutableFloatStateOf(180f) }
@@ -47,79 +44,68 @@ fun SettingsScreen(
         onColorSelected(selectedColor)
     }
 
-    Scaffold(
-        topBar = {
-            AudioReactiveTopBar(
-                title = "Settings",
-                canNavigateBack = true,
-                onBack = onBack
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "Visualizer Color",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Text(
-                text = "Visualizer Color",
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text("Preview")
+                Text("Preview")
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(120.dp)
-                            .background(
-                                color = selectedColor,
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                    )
-
-                    Column {
-                        Text("Hue: ${hue.toInt()}°")
-                        Slider(
-                            value = hue,
-                            onValueChange = { hue = it },
-                            valueRange = 0f..360f
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .background(
+                            color = selectedColor,
+                            shape = RoundedCornerShape(12.dp)
                         )
-                    }
+                )
 
-                    Column {
-                        Text("Saturation: ${(saturation * 100).toInt()}%")
-                        Slider(
-                            value = saturation,
-                            onValueChange = { saturation = it },
-                            valueRange = 0f..1f
-                        )
-                    }
-
-                    Column {
-                        Text("Brightness: ${(value * 100).toInt()}%")
-                        Slider(
-                            value = value,
-                            onValueChange = { value = it },
-                            valueRange = 0f..1f
-                        )
-                    }
-
-                    Text(
-                        text = "Selected color will be saved and used later.",
-                        style = MaterialTheme.typography.bodyMedium
+                Column {
+                    Text("Hue: ${hue.toInt()}°")
+                    Slider(
+                        value = hue,
+                        onValueChange = { hue = it },
+                        valueRange = 0f..360f
                     )
                 }
+
+                Column {
+                    Text("Saturation: ${(saturation * 100).toInt()}%")
+                    Slider(
+                        value = saturation,
+                        onValueChange = { saturation = it },
+                        valueRange = 0f..1f
+                    )
+                }
+
+                Column {
+                    Text("Brightness: ${(value * 100).toInt()}%")
+                    Slider(
+                        value = value,
+                        onValueChange = { value = it },
+                        valueRange = 0f..1f
+                    )
+                }
+
+                Text(
+                    text = "Selected color will be saved and used later.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
     }
