@@ -2,19 +2,26 @@ package com.audioreactive.ui.reactor
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import kotlin.math.PI
+import kotlin.math.acos
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-class lattice(
+class Lattice(
     private val x: Int,
     private val y: Int,
     private val width: Int,
-    private val height: Int,
-    private val frequencyBand: Int = 0
+    private val height: Int
 ) {
+
+    companion object {
+        const val VERTEX_COUNT = 100
+        const val DIMENSIONS = 24
+        val NORMALIZER = sqrt(11.0)
+        val MAX_ROTATION_ANGLE = (PI / 6.0).toFloat()
+        val IDENTITY_MATRIX = floatArrayOf(1f,0f,0f, 0f,1f,0f, 0f,0f,1f)
+    }
 
     private val octads: Array<Int> = arrayOf(
         255,      13107,    21845,    26265,    39321,    43605,    52275,
@@ -305,11 +312,16 @@ class lattice(
     )
 
 
-    private val _normalizer = sqrt(11.0)
+    private val _projectedVectors: Array<DoubleArray> = Array(3) { DoubleArray(DIMENSIONS) }
+    private val _smoothedDimScales: DoubleArray = DoubleArray(DIMENSIONS) { 1.0 }
 
-    private val _projectedVectors: Array<DoubleArray> = Array(2) {DoubleArray(24)}
+    @Volatile private var _targetRotation: FloatArray = IDENTITY_MATRIX.copyOf()
+    private val _displayedRotation: FloatArray = IDENTITY_MATRIX.copyOf()
+    private val _axisBuffer = FloatArray(3)
+    private val _tempMatrix = FloatArray(9)
+    private val _nextMatrix = FloatArray(9)
 
-    private val _projectedPoints: Array<Offset> = Array(100) {Offset.Zero}
+    private val _projectedPoints: Array<Offset> = Array(VERTEX_COUNT) { Offset.Zero }
 
     private var position: Offset = Offset(x.toFloat(), y.toFloat())
     private var speed: Double = 0.5
@@ -317,29 +329,118 @@ class lattice(
     fun getColor(): Color = color
     fun getProjectedPoints(): Array<Offset> = _projectedPoints
 
+    fun setRotation(matrix: FloatArray) {
+        val angle = rotationAngle(matrix).coerceAtMost(MAX_ROTATION_ANGLE)
+        if (angle < 1e-4f) { _targetRotation = IDENTITY_MATRIX.copyOf(); return }
+        val axis = FloatArray(3)
+        rotationAxis(matrix, angle, axis)
+        _targetRotation = fromAxisAngle(axis[0], axis[1], axis[2], angle)
+    }
+
+    private fun rotationAngle(R: FloatArray): Float =
+        acos(((R[0] + R[4] + R[8] - 1f) / 2f).coerceIn(-1f, 1f))
+
+    private fun rotationAxis(R: FloatArray, angle: Float, out: FloatArray) {
+        val s = sin(angle.toDouble()).toFloat()
+        if (s < 1e-4f) { out[0] = 0f; out[1] = 1f; out[2] = 0f; return }
+        out[0] = (R[7] - R[5]) / (2f * s)
+        out[1] = (R[2] - R[6]) / (2f * s)
+        out[2] = (R[3] - R[1]) / (2f * s)
+    }
+
+    private fun fromAxisAngle(ax: Float, ay: Float, az: Float, angle: Float): FloatArray {
+        val c = cos(angle.toDouble()).toFloat()
+        val s = sin(angle.toDouble()).toFloat()
+        val t = 1f - c
+        return floatArrayOf(
+            t*ax*ax+c,    t*ax*ay-s*az, t*ax*az+s*ay,
+            t*ax*ay+s*az, t*ay*ay+c,    t*ay*az-s*ax,
+            t*ax*az-s*ay, t*ay*az+s*ax, t*az*az+c
+        )
+    }
+
+    private fun updateRotation() {
+        val tAngle = rotationAngle(_targetRotation)
+        if (tAngle > 1e-4f) {
+            rotationAxis(_targetRotation, tAngle, _axisBuffer)
+            _targetRotation = fromAxisAngle(_axisBuffer[0], _axisBuffer[1], _axisBuffer[2], tAngle * 0.97f)
+        } else {
+            _targetRotation = IDENTITY_MATRIX.copyOf()
+        }
+
+        val dD = _displayedRotation
+        val tR = _targetRotation
+        for (i in 0..2) for (j in 0..2) {
+            var sum = 0f
+            for (k in 0..2) sum += dD[k * 3 + i] * tR[k * 3 + j]
+            _tempMatrix[i * 3 + j] = sum
+        }
+
+        val dAngle = rotationAngle(_tempMatrix)
+        if (dAngle < 1e-4f) return
+        rotationAxis(_tempMatrix, dAngle, _axisBuffer)
+
+        val stepAngle = dAngle * 0.15f
+        val c = cos(stepAngle.toDouble()).toFloat()
+        val s = sin(stepAngle.toDouble()).toFloat()
+        val t = 1f - c
+        val ax = _axisBuffer[0]; val ay = _axisBuffer[1]; val az = _axisBuffer[2]
+        _tempMatrix[0]=t*ax*ax+c;    _tempMatrix[1]=t*ax*ay-s*az; _tempMatrix[2]=t*ax*az+s*ay
+        _tempMatrix[3]=t*ax*ay+s*az; _tempMatrix[4]=t*ay*ay+c;    _tempMatrix[5]=t*ay*az-s*ax
+        _tempMatrix[6]=t*ax*az-s*ay; _tempMatrix[7]=t*ay*az+s*ax; _tempMatrix[8]=t*az*az+c
+
+        for (i in 0..2) for (j in 0..2) {
+            var sum = 0f
+            for (k in 0..2) sum += dD[i * 3 + k] * _tempMatrix[k * 3 + j]
+            _nextMatrix[i * 3 + j] = sum
+        }
+        _nextMatrix.copyInto(_displayedRotation)
+        renormalize(_displayedRotation)
+    }
+
+    private fun renormalize(R: FloatArray) {
+        var len = sqrt((R[0]*R[0] + R[1]*R[1] + R[2]*R[2]).toDouble()).toFloat()
+        if (len > 0f) { R[0] /= len; R[1] /= len; R[2] /= len }
+
+        val dot = R[3]*R[0] + R[4]*R[1] + R[5]*R[2]
+        R[3] -= dot*R[0]; R[4] -= dot*R[1]; R[5] -= dot*R[2]
+        len = sqrt((R[3]*R[3] + R[4]*R[4] + R[5]*R[5]).toDouble()).toFloat()
+        if (len > 0f) { R[3] /= len; R[4] /= len; R[5] /= len }
+
+        R[6] = R[1]*R[5] - R[2]*R[4]
+        R[7] = R[2]*R[3] - R[0]*R[5]
+        R[8] = R[0]*R[4] - R[1]*R[3]
+    }
+
     private fun computeProjectedVectors(time: Double) {
-        val time = time * speed
-        for (i in 0 until 24) {
+        val scaledTime = time * speed
+        for (i in 0 until DIMENSIONS) {
             when (elevenCycle[i][0]) {
                 0 -> {
                     _projectedVectors[0][i] = 0.0
                     _projectedVectors[1][i] = 0.0
+                    _projectedVectors[2][i] = 0.0
                 }
                 1 -> {
-                    val phase = elevenCycle[i][1].toDouble() / 11.0 + time
+                    val phase = elevenCycle[i][1].toDouble() / 11.0 + scaledTime
                     val angle = 2.0 * PI * phase
-                    _projectedVectors[0][i] = cos(angle) / _normalizer
-                    _projectedVectors[1][i] = -sin(angle) / _normalizer
+                    _projectedVectors[0][i] = cos(angle) / NORMALIZER
+                    _projectedVectors[1][i] = -sin(angle) / NORMALIZER
+                    val phaseZ = elevenCycle[i][1].toDouble() / 7.0 + scaledTime * 0.5
+                    _projectedVectors[2][i] = sin(2.0 * PI * phaseZ) / NORMALIZER
                 }
                 2 -> {
-                    val phase = elevenCycle[i][1].toDouble() / 11.0 - time
+                    val phase = elevenCycle[i][1].toDouble() / 11.0 - scaledTime
                     val angle = 2.0 * PI * phase
-                    _projectedVectors[0][i] = cos(angle) / _normalizer
-                    _projectedVectors[1][i] = -sin(angle) / _normalizer
+                    _projectedVectors[0][i] = cos(angle) / NORMALIZER
+                    _projectedVectors[1][i] = -sin(angle) / NORMALIZER
+                    val phaseZ = elevenCycle[i][1].toDouble() / 7.0 - scaledTime * 0.5
+                    _projectedVectors[2][i] = sin(2.0 * PI * phaseZ) / NORMALIZER
                 }
                 else -> {
                     _projectedVectors[0][i] = 0.0
                     _projectedVectors[1][i] = 0.0
+                    _projectedVectors[2][i] = 0.0
                 }
             }
         }
@@ -347,39 +448,41 @@ class lattice(
 
 
 
-    private fun computeProjectedPoints(volume: Double) {
+    private fun computeProjectedPoints(spectrum: FloatArray) {
         val base = minOf(width, height).toFloat() / 5f
-        val scale = base * (1f - volume.toFloat().coerceIn(0f, 0.3f))
 
-        for (i in 0 until 100) {
+        for (j in 0 until DIMENSIONS) {
+            val target = if (spectrum.isEmpty()) {
+                1.0
+            } else {
+                val bandStart = j * spectrum.size / DIMENSIONS
+                val bandEnd = ((j + 1) * spectrum.size / DIMENSIONS).coerceAtMost(spectrum.size)
+                var sum = 0f
+                for (k in bandStart until bandEnd) sum += spectrum[k]
+                1.0 + (sum / (bandEnd - bandStart)).coerceIn(0f, 1f) * 0.8
+            }
+            _smoothedDimScales[j] += (target - _smoothedDimScales[j]) * 0.12
+        }
+
+        for (i in 0 until VERTEX_COUNT) {
             var u = 0.0
             var v = 0.0
+            var w = 0.0
 
-            for (j in 0 until 24) {
+            for (j in 0 until DIMENSIONS) {
                 val p = points[i][j].toDouble()
-                u += p * _projectedVectors[0][j]
-                v += p * _projectedVectors[1][j]
+                u += p * _projectedVectors[0][j] * _smoothedDimScales[j]
+                v += p * _projectedVectors[1][j] * _smoothedDimScales[j]
+                w += p * _projectedVectors[2][j] * _smoothedDimScales[j]
             }
 
+            val R = _displayedRotation
+            val xRot = R[0] * v + R[1] * u + R[2] * w
+            val yRot = R[3] * v + R[4] * u + R[5] * w
+
             _projectedPoints[i] = Offset(
-                x = position.x + scale * v.toFloat(),
-                y = position.y + scale * u.toFloat()
-            )
-        }
-    }
-
-    fun DrawScope.drawLatticeLines(l: lattice, maxLines: Int = 1100, strokeWidth: Float = 1f) {
-        val pts = l.getProjectedPoints()
-        val c = l.getColor()
-        val n = minOf(l.edges.size, maxLines)
-
-        for (k in 0 until n) {
-            val (i, j) = l.edges[k]
-            drawLine(
-                color = c,
-                start = pts[i],
-                end = pts[j],
-                strokeWidth = strokeWidth
+                x = position.x + base * xRot.toFloat(),
+                y = position.y + base * yRot.toFloat()
             )
         }
     }
@@ -387,11 +490,10 @@ class lattice(
 
 
 
-
-
-    fun update(time: Double, volume: Double = 0.0) {
+    fun update(time: Double, spectrum: FloatArray = FloatArray(0)) {
         computeProjectedVectors(time)
-        computeProjectedPoints(volume)
+        updateRotation()
+        computeProjectedPoints(spectrum)
         color = computeColor(time)
     }
 
