@@ -1,5 +1,6 @@
 package com.audioreactive.ui.screens
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +25,7 @@ import com.audioreactive.ui.viewmodel.LatticeViewModel
 import com.audioreactive.ui.viewmodel.VisualizerViewModel
 import kotlinx.coroutines.delay
 
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun HomeScreen(
     audioPlayerViewModel: AudioPlayerViewModel,
@@ -64,7 +66,7 @@ fun HomeScreen(
                 )
             }
         }
-    ) { _ ->
+    ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -82,7 +84,7 @@ fun HomeScreen(
             VisualizerLattice(
                 modifier = Modifier.fillMaxSize(),
                 latticeViewModel = latticeViewModel,
-                volume = visualizerState.volume
+                spectrum = visualizerState.spectrum,
             )
         }
     }
