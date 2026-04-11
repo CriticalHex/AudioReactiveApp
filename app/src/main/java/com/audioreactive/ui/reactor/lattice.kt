@@ -310,6 +310,7 @@ class Lattice(
 
 
     private val _projectedVectors: Array<DoubleArray> = Array(3) { DoubleArray(DIMENSIONS) }
+    private val _smoothedDimScales: DoubleArray = DoubleArray(DIMENSIONS) { 1.0 }
 
     private val _projectedPoints: Array<Offset> = Array(VERTEX_COUNT) { Offset.Zero }
 
@@ -358,27 +359,29 @@ class Lattice(
     private fun computeProjectedPoints(spectrum: FloatArray) {
         val base = minOf(width, height).toFloat() / 5f
 
+        for (j in 0 until DIMENSIONS) {
+            val target = if (spectrum.isEmpty()) {
+                1.0
+            } else {
+                val bandStart = j * spectrum.size / DIMENSIONS
+                val bandEnd = ((j + 1) * spectrum.size / DIMENSIONS).coerceAtMost(spectrum.size)
+                var sum = 0f
+                for (k in bandStart until bandEnd) sum += spectrum[k]
+                1.0 + (sum / (bandEnd - bandStart)).coerceIn(0f, 1f) * 0.8
+            }
+            _smoothedDimScales[j] += (target - _smoothedDimScales[j]) * 0.12
+        }
+
         for (i in 0 until VERTEX_COUNT) {
             var u = 0.0
             var v = 0.0
             var w = 0.0
 
             for (j in 0 until DIMENSIONS) {
-                val dimScale = if (spectrum.isEmpty()) {
-                    1.0
-                } else {
-                    val bandStart = j * spectrum.size / DIMENSIONS
-                    val bandEnd = ((j + 1) * spectrum.size / DIMENSIONS).coerceAtMost(spectrum.size)
-                    var sum = 0f
-                    for (k in bandStart until bandEnd) sum += spectrum[k]
-                    val bandAvg = (sum / (bandEnd - bandStart)).coerceIn(0f, 1f)
-                    1.0 + bandAvg * 0.8
-                }
-
                 val p = points[i][j].toDouble()
-                u += p * _projectedVectors[0][j] * dimScale
-                v += p * _projectedVectors[1][j] * dimScale
-                w += p * _projectedVectors[2][j] * dimScale
+                u += p * _projectedVectors[0][j] * _smoothedDimScales[j]
+                v += p * _projectedVectors[1][j] * _smoothedDimScales[j]
+                w += p * _projectedVectors[2][j] * _smoothedDimScales[j]
             }
 
             _projectedPoints[i] = Offset(
