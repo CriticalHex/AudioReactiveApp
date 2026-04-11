@@ -12,59 +12,25 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
-import androidx.annotation.OptIn
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material3.Button
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.rememberDrawerState
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.util.UnstableApi
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.audioreactive.player.AudioPlayer
 import com.audioreactive.service.AudioCaptureService
-import com.audioreactive.ui.components.SelectFileButton
-import com.audioreactive.ui.components.StartAudioCaptureButton
 import com.audioreactive.ui.navigation.AudioReactiveNavHost
-import com.audioreactive.ui.navigation.AudioReactiveTopBar
 import com.audioreactive.ui.navigation.SnackbarManager
-import com.audioreactive.ui.navigation.specs.IScreenSpec
 import com.audioreactive.ui.theme.AudioReactiveTheme
 import com.audioreactive.ui.viewmodel.AudioPlayerViewModel
 import com.audioreactive.ui.viewmodel.AudioReactiveViewModelFactory
@@ -76,6 +42,7 @@ import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
 @UnstableApi
+@OptIn(UnstableApi::class)
 class MainActivity : ComponentActivity() {
     companion object {
         private const val LOG_TAG: String = "AR.MainActivity"
@@ -87,6 +54,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var latticeViewModel: LatticeViewModel
 
     private val serviceConnection = object : ServiceConnection {
+        @androidx.annotation.OptIn(UnstableApi::class)
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             audioService = (binder as AudioCaptureService.LocalBinder).getService()
             Log.d(LOG_TAG, "Service bound via connection")
@@ -107,7 +75,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    val filePickerLauncher = registerForActivityResult(OpenDocument()) { uri: Uri? ->
+    private val filePickerLauncher = registerForActivityResult(OpenDocument()) { uri: Uri? ->
         uri?.let {
             contentResolver.takePersistableUriPermission(
                 it,
@@ -115,6 +83,14 @@ class MainActivity : ComponentActivity() {
             )
             audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.LoadAudio(it))
         }
+    }
+
+    fun launchAudioCaptureRequest() {
+        requestScreenCaptureAndStartService()
+    }
+
+    fun launchAudioFilePicker() {
+        filePickerLauncher.launch(arrayOf("audio/*"))
     }
 
     private fun enableFullScreen() {
@@ -134,7 +110,7 @@ class MainActivity : ComponentActivity() {
                 this.defaultViewModelCreationExtras,
                 this
             )
-        )[AudioPlayerViewModel::class]
+        )[AudioPlayerViewModel::class.java]
 
         visualizerViewModel = ViewModelProvider(
             store = this.viewModelStore,
@@ -143,7 +119,7 @@ class MainActivity : ComponentActivity() {
                 this.defaultViewModelCreationExtras,
                 this
             )
-        )[VisualizerViewModel::class]
+        )[VisualizerViewModel::class.java]
 
         latticeViewModel = ViewModelProvider(
             store = this.viewModelStore,
@@ -152,25 +128,14 @@ class MainActivity : ComponentActivity() {
                 this.defaultViewModelCreationExtras,
                 this
             )
-        )[LatticeViewModel::class]
+        )[LatticeViewModel::class.java]
 
         enableFullScreen()
 
         setContent {
             AudioReactiveTheme {
                 val navController = rememberNavController()
-                val drawerState = rememberDrawerState(DrawerValue.Closed)
-                val scope = rememberCoroutineScope()
                 val snackbarHostState = remember { SnackbarHostState() }
-
-                val backStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = backStackEntry?.destination?.route
-
-                val isSettingsScreen = currentRoute == IScreenSpec.SETTINGS
-                val isHomeScreen =
-                    currentRoute == IScreenSpec.HOME ||
-                            currentRoute == IScreenSpec.ROOT ||
-                            currentRoute == null
 
                 LaunchedEffect(Unit) {
                     SnackbarManager.messages.collect { message ->
@@ -178,83 +143,16 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                ModalNavigationDrawer(
-                    drawerState = drawerState,
-                    gesturesEnabled = isHomeScreen,
-                    drawerContent = {
-                        ModalDrawerSheet {
-                            StartAudioCaptureButton {
-                                requestScreenCaptureAndStartService()
-                            }
+                Box(modifier = Modifier.fillMaxSize()) {
+                    AudioReactiveNavHost(
+                        modifier = Modifier.fillMaxSize(),
+                        navController = navController
+                    )
 
-                            SelectFileButton {
-                                filePickerLauncher.launch(arrayOf("audio/*"))
-                            }
-
-                            Button(
-                                onClick = {
-                                    scope.launch {
-                                        drawerState.close()
-                                    }
-                                    navController.navigate(IScreenSpec.SETTINGS)
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Settings")
-                            }
-                        }
-                    }
-                ) {
-                    when {
-                        isSettingsScreen -> {
-                            Scaffold(
-                                modifier = Modifier.fillMaxSize(),
-                                topBar = {
-                                    AudioReactiveTopBar(
-                                        title = "Settings",
-                                        canNavigateBack = true,
-                                        onBack = { navController.popBackStack() }
-                                    )
-                                },
-                                snackbarHost = {
-                                    SnackbarHost(hostState = snackbarHostState)
-                                }
-                            ) { innerPadding ->
-                                AudioReactiveNavHost(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(innerPadding),
-                                    navController = navController
-                                )
-                            }
-                        }
-
-                        else -> {
-                            Box(modifier = Modifier.fillMaxSize()) {
-                                AudioReactiveNavHost(
-                                    modifier = Modifier.fillMaxSize(),
-                                    navController = navController
-                                )
-
-                                SnackbarHost(
-                                    hostState = snackbarHostState,
-                                    modifier = Modifier
-                                        .align(Alignment.TopCenter)
-                                )
-
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .navigationBarsPadding()
-                                        .padding(bottom = 16.dp)
-                                        .align(Alignment.BottomCenter),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    MediaControlBar(audioPlayerViewModel = audioPlayerViewModel)
-                                }
-                            }
-                        }
-                    }
+                    SnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
                 }
             }
         }
@@ -308,45 +206,5 @@ class MainActivity : ComponentActivity() {
         super.onStop()
         Log.d(LOG_TAG, "Stopped, isFinishing is $isFinishing")
         audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.Pause)
-    }
-}
-
-@Composable
-fun MediaControlBar(audioPlayerViewModel: AudioPlayerViewModel) {
-    val state = audioPlayerViewModel.stateFlow.collectAsState()
-
-    Surface(
-        modifier = Modifier.wrapContentWidth(),
-        shape = RoundedCornerShape(32.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        tonalElevation = 8.dp,
-        shadowElevation = 8.dp
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = { audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.Previous) }) {
-                Icon(
-                    imageVector = Icons.Default.SkipPrevious,
-                    contentDescription = "Previous Song"
-                )
-            }
-
-            IconButton(onClick = { audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.TogglePlayback) }) {
-                Icon(
-                    imageVector = if (state.value.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = "Play/Pause"
-                )
-            }
-
-            IconButton(onClick = { audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.Next) }) {
-                Icon(
-                    imageVector = Icons.Default.SkipNext,
-                    contentDescription = "Next Song"
-                )
-            }
-        }
     }
 }

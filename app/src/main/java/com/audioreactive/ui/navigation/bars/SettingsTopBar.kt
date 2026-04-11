@@ -1,4 +1,4 @@
-package com.audioreactive.ui.navigation
+package com.audioreactive.ui.navigation.bars
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -11,21 +11,18 @@ import androidx.compose.runtime.Composable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AudioReactiveTopBar(
+fun SettingsTopBar(
     title: String,
-    canNavigateBack: Boolean = false,
-    onBack: () -> Unit = {}
+    onBack: () -> Unit
 ) {
     TopAppBar(
         title = { Text(text = title) },
         navigationIcon = {
-            if (canNavigateBack) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Go Back"
-                    )
-                }
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Go Back"
+                )
             }
         }
     )
