@@ -8,7 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import com.audioreactive.ui.reactor.AnimatedLatticeDisplay
-import com.audioreactive.ui.reactor.lattice
+import com.audioreactive.ui.reactor.Lattice
 import com.audioreactive.ui.viewmodel.LatticeViewModel
 import com.audioreactive.ui.viewmodel.intent.LatticeIntent
 
@@ -16,7 +16,7 @@ import com.audioreactive.ui.viewmodel.intent.LatticeIntent
 fun VisualizerLattice(
     modifier: Modifier = Modifier,
     latticeViewModel: LatticeViewModel,
-    volume: Float
+    spectrum: FloatArray
 ) {
     val state = latticeViewModel.stateFlow.collectAsState()
 
@@ -26,12 +26,11 @@ fun VisualizerLattice(
         val hPx = with(density) { maxHeight.toPx() }
 
         val l = remember(wPx.toInt(), hPx.toInt()) {
-            lattice(
+            Lattice(
                 x = (wPx / 2f).toInt(),
                 y = (hPx / 2f).toInt(),
                 width = wPx.toInt(),
-                height = hPx.toInt(),
-                frequencyBand = 0
+                height = hPx.toInt()
             )
         }
 
@@ -42,9 +41,9 @@ fun VisualizerLattice(
             timeProvider = { now: Long ->
                 latticeViewModel.dispatcher.invoke(LatticeIntent.CalculateTime(now))
                 state.value.timeInSeconds
-           },
+            },
             timeScale = 1.0,
-            volume = volume
+            spectrum = spectrum
         )
     }
 }

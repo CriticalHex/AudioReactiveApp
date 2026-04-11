@@ -1,21 +1,21 @@
 package com.audioreactive.ui.reactor
 
-import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberUpdatedState
-import kotlin.math.pow
 
-fun DrawScope.drawLatticeLines(l: lattice, maxLines: Int = 1100, strokeWidth: Float = 1f) {
+private const val DEFAULT_MAX_LINES = 1100
+
+fun DrawScope.drawLatticeLines(l: Lattice, maxLines: Int = DEFAULT_MAX_LINES, strokeWidth: Float = 1f) {
     val pts = l.getProjectedPoints()
     val c = l.getColor()
     val n = minOf(l.edges.size, maxLines)
@@ -33,9 +33,9 @@ fun DrawScope.drawLatticeLines(l: lattice, maxLines: Int = 1100, strokeWidth: Fl
 
 @Composable
 fun LatticeDisplay(
-    l: lattice,
+    l: Lattice,
     modifier: Modifier = Modifier,
-    maxLines: Int = 1100,
+    maxLines: Int = DEFAULT_MAX_LINES,
     strokeWidth: Float = 1f
 ) {
     Canvas(modifier = modifier.fillMaxSize()) {
@@ -45,17 +45,16 @@ fun LatticeDisplay(
 
 @Composable
 fun AnimatedLatticeDisplay(
-    l: lattice,
+    l: Lattice,
     modifier: Modifier = Modifier,
-    maxLines: Int = 1100,
+    maxLines: Int = DEFAULT_MAX_LINES,
     strokeWidth: Float = 1f,
     timeScale: Double = 1.0,
-    volume: Float = 0f,
+    spectrum: FloatArray = FloatArray(0),
     timeProvider: ((Long) -> Double)? = null
 ) {
-    var frame by remember { mutableStateOf(0L) }
-    var peakVolume by remember { mutableStateOf(0.001f) }
-    val latestVolume by rememberUpdatedState(volume)
+    var drawTick by remember { mutableLongStateOf(0L) }
+    val latestSpectrum by rememberUpdatedState(spectrum)
 
     LaunchedEffect(l, timeScale, timeProvider) {
         val start = withFrameNanos { it }
@@ -64,17 +63,13 @@ fun AnimatedLatticeDisplay(
             val t = timeProvider?.invoke(now)
                 ?: (((now - start) / 1_000_000_000.0) * timeScale)
 
-            val v = latestVolume
-            if (v > peakVolume) peakVolume = v
-            val normalized = (v / peakVolume).coerceIn(0f, 1f)
-            val curved = normalized.pow(4f)
-
-            l.update(t, curved.toDouble())
+            l.update(t, latestSpectrum)
+            drawTick = now
         }
     }
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        frame
+        drawTick
         drawLatticeLines(l, maxLines = maxLines, strokeWidth = strokeWidth)
     }
 }

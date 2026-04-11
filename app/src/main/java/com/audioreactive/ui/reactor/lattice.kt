@@ -2,19 +2,23 @@ package com.audioreactive.ui.reactor
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-class lattice(
+class Lattice(
     private val x: Int,
     private val y: Int,
     private val width: Int,
-    private val height: Int,
-    private val frequencyBand: Int = 0
+    private val height: Int
 ) {
+
+    companion object {
+        const val VERTEX_COUNT = 100
+        const val DIMENSIONS = 24
+        val NORMALIZER = sqrt(11.0)
+    }
 
     private val octads: Array<Int> = arrayOf(
         255,      13107,    21845,    26265,    39321,    43605,    52275,
@@ -305,11 +309,9 @@ class lattice(
     )
 
 
-    private val _normalizer = sqrt(11.0)
+    private val _projectedVectors: Array<DoubleArray> = Array(3) { DoubleArray(DIMENSIONS) }
 
-    private val _projectedVectors: Array<DoubleArray> = Array(2) {DoubleArray(24)}
-
-    private val _projectedPoints: Array<Offset> = Array(100) {Offset.Zero}
+    private val _projectedPoints: Array<Offset> = Array(VERTEX_COUNT) { Offset.Zero }
 
     private var position: Offset = Offset(x.toFloat(), y.toFloat())
     private var speed: Double = 0.5
@@ -318,28 +320,34 @@ class lattice(
     fun getProjectedPoints(): Array<Offset> = _projectedPoints
 
     private fun computeProjectedVectors(time: Double) {
-        val time = time * speed
-        for (i in 0 until 24) {
+        val scaledTime = time * speed
+        for (i in 0 until DIMENSIONS) {
             when (elevenCycle[i][0]) {
                 0 -> {
                     _projectedVectors[0][i] = 0.0
                     _projectedVectors[1][i] = 0.0
+                    _projectedVectors[2][i] = 0.0
                 }
                 1 -> {
-                    val phase = elevenCycle[i][1].toDouble() / 11.0 + time
+                    val phase = elevenCycle[i][1].toDouble() / 11.0 + scaledTime
                     val angle = 2.0 * PI * phase
-                    _projectedVectors[0][i] = cos(angle) / _normalizer
-                    _projectedVectors[1][i] = -sin(angle) / _normalizer
+                    _projectedVectors[0][i] = cos(angle) / NORMALIZER
+                    _projectedVectors[1][i] = -sin(angle) / NORMALIZER
+                    val phaseZ = elevenCycle[i][1].toDouble() / 7.0 + scaledTime * 0.5
+                    _projectedVectors[2][i] = sin(2.0 * PI * phaseZ) / NORMALIZER
                 }
                 2 -> {
-                    val phase = elevenCycle[i][1].toDouble() / 11.0 - time
+                    val phase = elevenCycle[i][1].toDouble() / 11.0 - scaledTime
                     val angle = 2.0 * PI * phase
-                    _projectedVectors[0][i] = cos(angle) / _normalizer
-                    _projectedVectors[1][i] = -sin(angle) / _normalizer
+                    _projectedVectors[0][i] = cos(angle) / NORMALIZER
+                    _projectedVectors[1][i] = -sin(angle) / NORMALIZER
+                    val phaseZ = elevenCycle[i][1].toDouble() / 7.0 - scaledTime * 0.5
+                    _projectedVectors[2][i] = sin(2.0 * PI * phaseZ) / NORMALIZER
                 }
                 else -> {
                     _projectedVectors[0][i] = 0.0
                     _projectedVectors[1][i] = 0.0
+                    _projectedVectors[2][i] = 0.0
                 }
             }
         }
@@ -347,39 +355,35 @@ class lattice(
 
 
 
-    private fun computeProjectedPoints(volume: Double) {
+    private fun computeProjectedPoints(spectrum: FloatArray) {
         val base = minOf(width, height).toFloat() / 5f
-        val scale = base * (1f - volume.toFloat().coerceIn(0f, 0.3f))
 
-        for (i in 0 until 100) {
+        for (i in 0 until VERTEX_COUNT) {
             var u = 0.0
             var v = 0.0
+            var w = 0.0
 
-            for (j in 0 until 24) {
+            for (j in 0 until DIMENSIONS) {
+                val dimScale = if (spectrum.isEmpty()) {
+                    1.0
+                } else {
+                    val bandStart = j * spectrum.size / DIMENSIONS
+                    val bandEnd = ((j + 1) * spectrum.size / DIMENSIONS).coerceAtMost(spectrum.size)
+                    var sum = 0f
+                    for (k in bandStart until bandEnd) sum += spectrum[k]
+                    val bandAvg = (sum / (bandEnd - bandStart)).coerceIn(0f, 1f)
+                    1.0 + bandAvg * 0.8
+                }
+
                 val p = points[i][j].toDouble()
-                u += p * _projectedVectors[0][j]
-                v += p * _projectedVectors[1][j]
+                u += p * _projectedVectors[0][j] * dimScale
+                v += p * _projectedVectors[1][j] * dimScale
+                w += p * _projectedVectors[2][j] * dimScale
             }
 
             _projectedPoints[i] = Offset(
-                x = position.x + scale * v.toFloat(),
-                y = position.y + scale * u.toFloat()
-            )
-        }
-    }
-
-    fun DrawScope.drawLatticeLines(l: lattice, maxLines: Int = 1100, strokeWidth: Float = 1f) {
-        val pts = l.getProjectedPoints()
-        val c = l.getColor()
-        val n = minOf(l.edges.size, maxLines)
-
-        for (k in 0 until n) {
-            val (i, j) = l.edges[k]
-            drawLine(
-                color = c,
-                start = pts[i],
-                end = pts[j],
-                strokeWidth = strokeWidth
+                x = position.x + base * v.toFloat(),
+                y = position.y + base * u.toFloat()
             )
         }
     }
@@ -387,11 +391,9 @@ class lattice(
 
 
 
-
-
-    fun update(time: Double, volume: Double = 0.0) {
+    fun update(time: Double, spectrum: FloatArray = FloatArray(0)) {
         computeProjectedVectors(time)
-        computeProjectedPoints(volume)
+        computeProjectedPoints(spectrum)
         color = computeColor(time)
     }
 

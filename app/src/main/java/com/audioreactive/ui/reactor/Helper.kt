@@ -4,22 +4,25 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import kotlin.math.*
 
+private const val DEFAULT_ALPHA = 100f / 255f
+private const val HUE_CYCLE_PERIOD_SECONDS = 5.0
+
 fun dist(p1: Offset, p2: Offset): Double {
     val dx = (p1.x - p2.x).toDouble()
     val dy = (p1.y - p2.y).toDouble()
     return sqrt(dx * dx + dy * dy)
 }
 
-private fun lerpColor(c1: Color, c2: Color, t: Float, alpha: Float = 100f / 255f): Color {
+private fun lerpColor(c1: Color, c2: Color, t: Float, alpha: Float = DEFAULT_ALPHA): Color {
     val r = c1.red + t * (c2.red - c1.red)
     val g = c1.green + t * (c2.green - c1.green)
     val b = c1.blue + t * (c2.blue - c1.blue)
     return Color(r, g, b, alpha)
 }
 
-fun computeColor(time: Double, alpha: Float = 100f / 255f): Color {
+fun computeColor(time: Double, alpha: Float = DEFAULT_ALPHA): Color {
     val hueRange = 360.0
-    val hue = ((time / 5.0) % 1.0) * hueRange
+    val hue = ((time / HUE_CYCLE_PERIOD_SECONDS) % 1.0) * hueRange
     val i = ((hue / 60.0).toInt()) % 6
     val f = (hue / 60.0 - i).toFloat()
 

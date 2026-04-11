@@ -42,10 +42,15 @@ fun VisualizerScreen(spectrum: FloatArray, modifier: Modifier = Modifier) {
 
             val barHeight = size.height * displayHeights[i]
 
+            val t = i.toFloat() / (barCount - 1).toFloat()
+            val r = (1f - 2f * t).coerceIn(0f, 1f)
+            val b = (2f * t - 1f).coerceIn(0f, 1f)
+            val g = 1f - r - b
+
             drawRect(
-                color = Color.Cyan,
+                color = Color(r, g, b, 0.5f),
                 topLeft = Offset(i * barWidth, size.height - barHeight),
-                size = Size(barWidth * 0.8f, barHeight)
+                size = Size(barWidth * 1f, barHeight) // the 1f is for gaps in between rectangles
             )
         }
     }

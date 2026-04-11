@@ -43,7 +43,7 @@ fun HomeScreen(
             VisualizerLattice(
                 modifier = Modifier.fillMaxSize(),
                 latticeViewModel = latticeViewModel,
-                volume = visualizerState.value.volume
+                spectrum = visualizerState.value.spectrum
             )
         }
     }
