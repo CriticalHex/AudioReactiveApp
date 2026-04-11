@@ -2,12 +2,16 @@ package com.audioreactive.ui.viewmodel
 
 import android.content.Context
 import android.util.Log
+import androidx.annotation.OptIn
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.MutableCreationExtras
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import com.audioreactive.player.AudioPlayer
+import kotlinx.coroutines.channels.Channel
 
 class AudioReactiveViewModelFactory: ViewModelProvider.Factory {
     companion object {
@@ -18,6 +22,7 @@ class AudioReactiveViewModelFactory: ViewModelProvider.Factory {
         }
     }
 
+    @OptIn(UnstableApi::class)
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(
         modelClass: Class<T>,
@@ -30,7 +35,7 @@ class AudioReactiveViewModelFactory: ViewModelProvider.Factory {
                     val context = checkNotNull(extras[CONTEXT_KEY])
                     val savedStateHandle = extras.createSavedStateHandle()
                     AudioPlayerViewModel(
-                        ExoPlayer.Builder(context).build(),
+                        AudioPlayer.getInstance(context).player,
                         savedStateHandle
                     )
                 }
@@ -42,7 +47,7 @@ class AudioReactiveViewModelFactory: ViewModelProvider.Factory {
                     )
                 }
                 isAssignableFrom(VisualizerViewModel::class.java) -> {
-                    Log.d(LOG_TAG, "creating NewCharacterViewModel")
+                    Log.d(LOG_TAG, "creating VisualizerViewModel")
                     val savedStateHandle = extras.createSavedStateHandle()
                     VisualizerViewModel(
                         savedStateHandle

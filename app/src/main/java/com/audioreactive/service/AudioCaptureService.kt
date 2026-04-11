@@ -21,8 +21,11 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Process
 import android.util.Log
+import androidx.annotation.OptIn
 import androidx.annotation.RequiresPermission
+import androidx.media3.common.util.UnstableApi
 import com.audioreactive.AudioProcessor
+import com.audioreactive.player.AudioPlayer
 import kotlinx.coroutines.channels.Channel
 
 class AudioCaptureService : Service() {
@@ -41,16 +44,25 @@ class AudioCaptureService : Service() {
 
     private lateinit var mediaProjection: MediaProjection
     private lateinit var audioRecord: AudioRecord
-    private val audioChannel = Channel<FloatArray>(3)
+    val audioChannel = Channel<FloatArray>(3)
     private var processor = AudioProcessor(audioChannel)
     private var captureThread: Thread? = null
-    @Volatile private var running = false
+    @Volatile var running = false
+        private set
 
     private val projectionCallback = object : MediaProjection.Callback() {
         override fun onStop() {
             Log.d(LOG_TAG, "Media projection stopped")
             stopCaptureAndSelf()
         }
+    }
+
+    @OptIn(UnstableApi::class)
+    fun connectToAudioPlayer(audioPlayer: AudioPlayer) {
+        audioPlayer.registerAudioDataListener { floatArray ->
+            audioChannel.trySend(floatArray)
+        }
+        processor.start()
     }
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
@@ -68,6 +80,7 @@ class AudioCaptureService : Service() {
         mediaProjection.registerCallback(projectionCallback, Handler(Looper.getMainLooper()))
 
         if (!running) {
+            processor.stop()
             Log.d(LOG_TAG, "Starting capture")
             startCapture()
             processor.start()

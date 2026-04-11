@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">AudioReactive</string>
+    <string name="description">tell me if you see this string</string>
+    <string name="empty"></string>
 </resources>

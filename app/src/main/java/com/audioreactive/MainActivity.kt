@@ -12,6 +12,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
+import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -53,8 +54,10 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.media3.common.util.UnstableApi
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.audioreactive.player.AudioPlayer
 import com.audioreactive.service.AudioCaptureService
 import com.audioreactive.ui.components.SelectFileButton
 import com.audioreactive.ui.components.StartAudioCaptureButton
@@ -72,6 +75,7 @@ import com.audioreactive.ui.viewmodel.intent.VisualizerIntent
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
+@UnstableApi
 class MainActivity : ComponentActivity() {
     companion object {
         private const val LOG_TAG: String = "AR.MainActivity"
@@ -86,6 +90,7 @@ class MainActivity : ComponentActivity() {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             audioService = (binder as AudioCaptureService.LocalBinder).getService()
             Log.d(LOG_TAG, "Service bound via connection")
+            audioService?.connectToAudioPlayer(AudioPlayer.getInstance(this@MainActivity))
             observeSpectrum()
         }
 
@@ -97,6 +102,7 @@ class MainActivity : ComponentActivity() {
 
     private val projectionLauncher = registerForActivityResult(StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK && result.data != null) {
+            AudioPlayer.getInstance(this@MainActivity).unregisterAudioDataListener()
             startAudioService(result.data!!)
         }
     }
