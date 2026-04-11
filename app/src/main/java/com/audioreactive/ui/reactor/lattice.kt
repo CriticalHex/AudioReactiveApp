@@ -3,6 +3,7 @@ package com.audioreactive.ui.reactor
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import kotlin.math.PI
+import kotlin.math.acos
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -18,6 +19,8 @@ class Lattice(
         const val VERTEX_COUNT = 100
         const val DIMENSIONS = 24
         val NORMALIZER = sqrt(11.0)
+        val MAX_ROTATION_ANGLE = (PI / 6.0).toFloat()
+        val IDENTITY_MATRIX = floatArrayOf(1f,0f,0f, 0f,1f,0f, 0f,0f,1f)
     }
 
     private val octads: Array<Int> = arrayOf(
@@ -312,6 +315,12 @@ class Lattice(
     private val _projectedVectors: Array<DoubleArray> = Array(3) { DoubleArray(DIMENSIONS) }
     private val _smoothedDimScales: DoubleArray = DoubleArray(DIMENSIONS) { 1.0 }
 
+    @Volatile private var _targetRotation: FloatArray = IDENTITY_MATRIX.copyOf()
+    private val _displayedRotation: FloatArray = IDENTITY_MATRIX.copyOf()
+    private val _axisBuffer = FloatArray(3)
+    private val _tempMatrix = FloatArray(9)
+    private val _nextMatrix = FloatArray(9)
+
     private val _projectedPoints: Array<Offset> = Array(VERTEX_COUNT) { Offset.Zero }
 
     private var position: Offset = Offset(x.toFloat(), y.toFloat())
@@ -319,6 +328,89 @@ class Lattice(
 
     fun getColor(): Color = color
     fun getProjectedPoints(): Array<Offset> = _projectedPoints
+
+    fun setRotation(matrix: FloatArray) {
+        val angle = rotationAngle(matrix).coerceAtMost(MAX_ROTATION_ANGLE)
+        if (angle < 1e-4f) { _targetRotation = IDENTITY_MATRIX.copyOf(); return }
+        val axis = FloatArray(3)
+        rotationAxis(matrix, angle, axis)
+        _targetRotation = fromAxisAngle(axis[0], axis[1], axis[2], angle)
+    }
+
+    private fun rotationAngle(R: FloatArray): Float =
+        acos(((R[0] + R[4] + R[8] - 1f) / 2f).coerceIn(-1f, 1f))
+
+    private fun rotationAxis(R: FloatArray, angle: Float, out: FloatArray) {
+        val s = sin(angle.toDouble()).toFloat()
+        if (s < 1e-4f) { out[0] = 0f; out[1] = 1f; out[2] = 0f; return }
+        out[0] = (R[7] - R[5]) / (2f * s)
+        out[1] = (R[2] - R[6]) / (2f * s)
+        out[2] = (R[3] - R[1]) / (2f * s)
+    }
+
+    private fun fromAxisAngle(ax: Float, ay: Float, az: Float, angle: Float): FloatArray {
+        val c = cos(angle.toDouble()).toFloat()
+        val s = sin(angle.toDouble()).toFloat()
+        val t = 1f - c
+        return floatArrayOf(
+            t*ax*ax+c,    t*ax*ay-s*az, t*ax*az+s*ay,
+            t*ax*ay+s*az, t*ay*ay+c,    t*ay*az-s*ax,
+            t*ax*az-s*ay, t*ay*az+s*ax, t*az*az+c
+        )
+    }
+
+    private fun updateRotation() {
+        val tAngle = rotationAngle(_targetRotation)
+        if (tAngle > 1e-4f) {
+            rotationAxis(_targetRotation, tAngle, _axisBuffer)
+            _targetRotation = fromAxisAngle(_axisBuffer[0], _axisBuffer[1], _axisBuffer[2], tAngle * 0.97f)
+        } else {
+            _targetRotation = IDENTITY_MATRIX.copyOf()
+        }
+
+        val dD = _displayedRotation
+        val tR = _targetRotation
+        for (i in 0..2) for (j in 0..2) {
+            var sum = 0f
+            for (k in 0..2) sum += dD[k * 3 + i] * tR[k * 3 + j]
+            _tempMatrix[i * 3 + j] = sum
+        }
+
+        val dAngle = rotationAngle(_tempMatrix)
+        if (dAngle < 1e-4f) return
+        rotationAxis(_tempMatrix, dAngle, _axisBuffer)
+
+        val stepAngle = dAngle * 0.15f
+        val c = cos(stepAngle.toDouble()).toFloat()
+        val s = sin(stepAngle.toDouble()).toFloat()
+        val t = 1f - c
+        val ax = _axisBuffer[0]; val ay = _axisBuffer[1]; val az = _axisBuffer[2]
+        _tempMatrix[0]=t*ax*ax+c;    _tempMatrix[1]=t*ax*ay-s*az; _tempMatrix[2]=t*ax*az+s*ay
+        _tempMatrix[3]=t*ax*ay+s*az; _tempMatrix[4]=t*ay*ay+c;    _tempMatrix[5]=t*ay*az-s*ax
+        _tempMatrix[6]=t*ax*az-s*ay; _tempMatrix[7]=t*ay*az+s*ax; _tempMatrix[8]=t*az*az+c
+
+        for (i in 0..2) for (j in 0..2) {
+            var sum = 0f
+            for (k in 0..2) sum += dD[i * 3 + k] * _tempMatrix[k * 3 + j]
+            _nextMatrix[i * 3 + j] = sum
+        }
+        _nextMatrix.copyInto(_displayedRotation)
+        renormalize(_displayedRotation)
+    }
+
+    private fun renormalize(R: FloatArray) {
+        var len = sqrt((R[0]*R[0] + R[1]*R[1] + R[2]*R[2]).toDouble()).toFloat()
+        if (len > 0f) { R[0] /= len; R[1] /= len; R[2] /= len }
+
+        val dot = R[3]*R[0] + R[4]*R[1] + R[5]*R[2]
+        R[3] -= dot*R[0]; R[4] -= dot*R[1]; R[5] -= dot*R[2]
+        len = sqrt((R[3]*R[3] + R[4]*R[4] + R[5]*R[5]).toDouble()).toFloat()
+        if (len > 0f) { R[3] /= len; R[4] /= len; R[5] /= len }
+
+        R[6] = R[1]*R[5] - R[2]*R[4]
+        R[7] = R[2]*R[3] - R[0]*R[5]
+        R[8] = R[0]*R[4] - R[1]*R[3]
+    }
 
     private fun computeProjectedVectors(time: Double) {
         val scaledTime = time * speed
@@ -384,9 +476,13 @@ class Lattice(
                 w += p * _projectedVectors[2][j] * _smoothedDimScales[j]
             }
 
+            val R = _displayedRotation
+            val xRot = R[0] * v + R[1] * u + R[2] * w
+            val yRot = R[3] * v + R[4] * u + R[5] * w
+
             _projectedPoints[i] = Offset(
-                x = position.x + base * v.toFloat(),
-                y = position.y + base * u.toFloat()
+                x = position.x + base * xRot.toFloat(),
+                y = position.y + base * yRot.toFloat()
             )
         }
     }
@@ -396,6 +492,7 @@ class Lattice(
 
     fun update(time: Double, spectrum: FloatArray = FloatArray(0)) {
         computeProjectedVectors(time)
+        updateRotation()
         computeProjectedPoints(spectrum)
         color = computeColor(time)
     }
