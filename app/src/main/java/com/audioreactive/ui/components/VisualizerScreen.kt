@@ -75,7 +75,7 @@ fun VisualizerScreen(spectrum: FloatArray, modifier: Modifier = Modifier) {
 
         for (i in 0 until barCount) {
             val target = current[i].coerceIn(0f, 1f)
-            val rate = if (target > displayHeights[i]) 0.35f else 0.07f
+            val rate = if (target > displayHeights[i]) 0.5f else 0.4f // first val is the increase rate, second val is the decrease rate
             displayHeights[i] += rate * (target - displayHeights[i])
 
             val barHeight = size.height * displayHeights[i]
