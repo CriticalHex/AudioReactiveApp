@@ -38,6 +38,7 @@ import com.audioreactive.ui.viewmodel.LatticeViewModel
 import com.audioreactive.ui.viewmodel.VisualizerViewModel
 import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent
 import com.audioreactive.ui.viewmodel.intent.VisualizerIntent
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
@@ -183,6 +184,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun observeSpectrum() {
+        val spectrumFlow = audioService?.spectrumFlow() ?: return
+
         lifecycleScope.launch {
             audioService?.volumeFlow()?.sample(10)?.collect { volume ->
                 visualizerViewModel.dispatcher.invoke(VisualizerIntent.UpdateVolume(volume))
@@ -190,7 +193,9 @@ class MainActivity : ComponentActivity() {
         }
 
         lifecycleScope.launch {
-            audioService?.spectrumFlow()?.collect { spectrum ->
+            combine(spectrumFlow, audioPlayerViewModel.stateFlow) { spectrum, playerState ->
+                if (playerState.isPlaying) spectrum else FloatArray(spectrum.size)
+            }.collect { spectrum ->
                 visualizerViewModel.dispatcher.invoke(VisualizerIntent.UpdateSpectrum(spectrum))
             }
         }
@@ -205,6 +210,6 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         Log.d(LOG_TAG, "Stopped, isFinishing is $isFinishing")
-        audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.Pause)
+        if (isFinishing) audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.Pause)
     }
 }
