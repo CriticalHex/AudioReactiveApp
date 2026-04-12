@@ -477,8 +477,8 @@ class Lattice(
             }
 
             val R = _displayedRotation
-            val xRot = R[0] * v + R[1] * u + R[2] * w
-            val yRot = R[3] * v + R[4] * u + R[5] * w
+            val xRot = R[0] * v + R[2] * u + R[1] * w
+            val yRot = R[6] * v + R[8] * u + R[7] * w
 
             _projectedPoints[i] = Offset(
                 x = position.x + base * xRot.toFloat(),

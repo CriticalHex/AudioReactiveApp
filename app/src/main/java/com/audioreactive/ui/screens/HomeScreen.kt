@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import com.audioreactive.ui.components.VisualizerLattice
 import com.audioreactive.ui.components.VisualizerScreen
+import com.audioreactive.ui.components.VisualizerScreenFast
 import com.audioreactive.ui.navigation.bars.AudioReactiveBottomBar
 import com.audioreactive.ui.navigation.bars.AudioReactiveTopBar
 import com.audioreactive.ui.viewmodel.AudioPlayerViewModel
@@ -79,7 +80,10 @@ fun HomeScreen(
                     )
                 }
         ) {
+            // Can put this in the settings if you want to swtich between seizure and non seizure modes lmao
+
             VisualizerScreen(visualizerState.spectrum)
+//            VisualizerScreenFast(visualizerState.spectrum)
 
             VisualizerLattice(
                 modifier = Modifier.fillMaxSize(),
