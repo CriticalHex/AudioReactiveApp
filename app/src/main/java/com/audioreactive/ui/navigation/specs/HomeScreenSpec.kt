@@ -13,8 +13,6 @@ import com.audioreactive.ui.screens.HomeScreen
 import com.audioreactive.ui.viewmodel.AudioPlayerViewModel
 import com.audioreactive.ui.viewmodel.LatticeViewModel
 import com.audioreactive.ui.viewmodel.VisualizerViewModel
-import com.audioreactive.ui.viewmodel.intent.VisualizerIntent
-import com.audioreactive.ui.viewmodel.intent.VisualizerIntent.UpdateRunning
 
 object HomeScreenSpec : IScreenSpec {
     override val route: String = IScreenSpec.HOME
