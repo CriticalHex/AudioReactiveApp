@@ -40,12 +40,12 @@ fun VisualizerScreenFast(spectrum: FloatArray, modifier: Modifier = Modifier) {
             }
 
             val barHeight = size.height * displayHeights[i]
-            val t = i.toFloat() / (barCount - 1).toFloat()
 
             drawRect(
-                color = Color.hsv(t * 270f, 1f, 1f, 0.2f),
+//                color = Color.hsv(0f, 0f, 0.2f + 0.8f * (i.toFloat() / barCount), 1f),
+                color = Color.hsv(270f * (1f - i.toFloat() / barCount), 1f, 1f, 0.2f),
                 topLeft = Offset(i * barWidth, size.height - barHeight),
-                size = Size(barWidth * 1f, barHeight)
+                size = Size(barWidth, barHeight)
             )
         }
     }
@@ -80,12 +80,10 @@ fun VisualizerScreen(spectrum: FloatArray, modifier: Modifier = Modifier) {
 
             val barHeight = size.height * displayHeights[i]
 
-            val t = i.toFloat() / (barCount - 1).toFloat()
-
             drawRect(
-                color = Color.hsv(t * 270f, 1f, 1f, 0.2f),
+                color = Color.hsv(270f * (1f - i.toFloat() / barCount), 1f, 1f, .9f),
                 topLeft = Offset(i * barWidth, size.height - barHeight),
-                size = Size(barWidth * 1f, barHeight) // the 1f is for gaps in between rectangles
+                size = Size(barWidth, barHeight)
             )
         }
     }
