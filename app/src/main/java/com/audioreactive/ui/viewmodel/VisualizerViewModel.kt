@@ -3,6 +3,8 @@ package com.audioreactive.ui.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.serialization.saved
+import androidx.lifecycle.viewModelScope
+import com.audioreactive.data.AudioReactiveRepo
 import com.audioreactive.ui.viewmodel.effect.VisualizerEffect
 import com.audioreactive.ui.viewmodel.intent.VisualizerIntent
 import com.audioreactive.ui.viewmodel.intent.VisualizerIntent.UpdateSpectrum
@@ -10,13 +12,16 @@ import com.audioreactive.ui.viewmodel.intent.VisualizerIntent.UpdateVolume
 import com.audioreactive.ui.viewmodel.state.VisualizerState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 
 class VisualizerViewModel
 internal constructor(
+    private val audioReactiveRepo: AudioReactiveRepo,
     savedStateHandle: SavedStateHandle
 ): ViewModel(), IViewModelContract<VisualizerState, VisualizerIntent, VisualizerEffect> {
     companion object {
@@ -29,7 +34,17 @@ internal constructor(
     )
 
     private val _stateFlow: MutableStateFlow<VisualizerState> = MutableStateFlow(_savedState)
-    override val stateFlow: StateFlow<VisualizerState> = _stateFlow.asStateFlow()
+    override val stateFlow: StateFlow<VisualizerState> = _stateFlow
+        .combine(audioReactiveRepo.serviceRunning) { currentState, serviceRunning ->
+            // Update the 'running' field from the repo, keep everything else from currentState
+            currentState.copy(running = serviceRunning).also {
+                _savedState = it // Keep SavedStateHandle updated
+            }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = _savedState
+        )
 
     private val _effectFlow: MutableStateFlow<VisualizerEffect?> = MutableStateFlow(null)
     override val effectFlow: SharedFlow<VisualizerEffect?> = _effectFlow.asSharedFlow()

@@ -54,6 +54,7 @@ class AudioProcessor(
     }
 
     fun start() {
+        jobScope.cancel()
         createScope()
         scope.launch {
             Log.d(LOG_TAG, "Starting the audio processor")

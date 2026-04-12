@@ -20,6 +20,6 @@ fun SelectFileButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
 @Preview
 private fun PreviewSelectFileButton() {
     Scaffold { innerPadding ->
-        StartAudioCaptureButton {  }
+        SelectFileButton {  }
     }
 }

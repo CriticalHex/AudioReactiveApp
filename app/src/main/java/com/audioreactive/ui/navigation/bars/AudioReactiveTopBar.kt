@@ -19,7 +19,8 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun AudioReactiveTopBar(
-    onStartCapture: () -> Unit,
+    captureRunning: Boolean,
+    onCaptureClick: () -> Unit,
     onPickAudioFile: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
@@ -36,7 +37,7 @@ fun AudioReactiveTopBar(
         ) {
 
             IconButton(
-                onClick = onStartCapture,
+                onClick = onCaptureClick,
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .padding(start = 16.dp)
@@ -44,7 +45,7 @@ fun AudioReactiveTopBar(
                 Icon(
                     imageVector = Icons.Default.SurroundSound,
                     contentDescription = "Start Audio Capture",
-                    tint = Color.White
+                    tint = if (!captureRunning) Color.White else Color.Red
                 )
             }
 

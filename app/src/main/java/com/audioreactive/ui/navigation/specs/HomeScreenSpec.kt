@@ -13,6 +13,8 @@ import com.audioreactive.ui.screens.HomeScreen
 import com.audioreactive.ui.viewmodel.AudioPlayerViewModel
 import com.audioreactive.ui.viewmodel.LatticeViewModel
 import com.audioreactive.ui.viewmodel.VisualizerViewModel
+import com.audioreactive.ui.viewmodel.intent.VisualizerIntent
+import com.audioreactive.ui.viewmodel.intent.VisualizerIntent.UpdateRunning
 
 object HomeScreenSpec : IScreenSpec {
     override val route: String = IScreenSpec.HOME
@@ -32,17 +34,26 @@ object HomeScreenSpec : IScreenSpec {
         val visualizerViewModel: VisualizerViewModel = viewModel(activity)
         val latticeViewModel: LatticeViewModel = viewModel(activity)
 
+        val (visualizerState, visualizerDispatcher, _) = visualizerViewModel.use(mainActivity)
+
         HomeScreen(
             audioPlayerViewModel = audioPlayerViewModel,
             visualizerViewModel = visualizerViewModel,
             latticeViewModel = latticeViewModel,
-            onStartCapture = { mainActivity.launchAudioCaptureRequest() },
+            onCaptureClick = {
+                if (!visualizerState.running) {
+                    mainActivity.launchAudioCaptureRequest()
+                } else {
+                    mainActivity.stopAudioCapture()
+                }
+            },
             onPickAudioFile = { mainActivity.launchAudioFilePicker() },
             onOpenSettings = {
                 navController.navigate(IScreenSpec.SETTINGS) {
                     launchSingleTop = true
                 }
-            }
+            },
+            captureRunning = visualizerState.running
         )
     }
 }

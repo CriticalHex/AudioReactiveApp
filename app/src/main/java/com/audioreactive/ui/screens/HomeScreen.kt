@@ -32,9 +32,10 @@ fun HomeScreen(
     audioPlayerViewModel: AudioPlayerViewModel,
     visualizerViewModel: VisualizerViewModel,
     latticeViewModel: LatticeViewModel,
-    onStartCapture: () -> Unit,
+    onCaptureClick: () -> Unit,
     onPickAudioFile: () -> Unit,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    captureRunning: Boolean
 ) {
     val visualizerState by visualizerViewModel.stateFlow.collectAsState()
 
@@ -54,7 +55,8 @@ fun HomeScreen(
         topBar = {
             if (controlsVisible) {
                 AudioReactiveTopBar(
-                    onStartCapture = onStartCapture,
+                    captureRunning = captureRunning,
+                    onCaptureClick = onCaptureClick,
                     onPickAudioFile = onPickAudioFile,
                     onOpenSettings = onOpenSettings
                 )

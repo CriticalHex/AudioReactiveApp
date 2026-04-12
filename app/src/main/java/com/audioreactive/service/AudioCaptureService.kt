@@ -21,13 +21,14 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Process
 import android.util.Log
-import androidx.annotation.OptIn
 import androidx.annotation.RequiresPermission
 import androidx.media3.common.util.UnstableApi
 import com.audioreactive.AudioProcessor
+import com.audioreactive.data.AudioReactiveRepo
 import com.audioreactive.player.AudioPlayer
 import kotlinx.coroutines.channels.Channel
 
+@UnstableApi
 class AudioCaptureService : Service() {
 
     companion object {
@@ -44,30 +45,45 @@ class AudioCaptureService : Service() {
 
     private lateinit var mediaProjection: MediaProjection
     private lateinit var audioRecord: AudioRecord
+    private lateinit var audioReactiveRepo: AudioReactiveRepo
+    private lateinit var audioPlayer: AudioPlayer
     val audioChannel = Channel<FloatArray>(3)
     private var processor = AudioProcessor(audioChannel)
     private var captureThread: Thread? = null
-    @Volatile var running = false
-        private set
+    @Volatile private var running = false
+        set(value) {
+            field = value
+            this.audioReactiveRepo.updateServiceRunning(value)
+        }
 
     private val projectionCallback = object : MediaProjection.Callback() {
         override fun onStop() {
             Log.d(LOG_TAG, "Media projection stopped")
-            stopCaptureAndSelf()
+//            stopCaptureAndSelf()
         }
     }
 
-    @OptIn(UnstableApi::class)
     fun connectToAudioPlayer(audioPlayer: AudioPlayer) {
+        this.audioPlayer = audioPlayer
+        registerAudioListener()
+        processor.start()
+    }
+
+    private fun registerAudioListener() {
         audioPlayer.registerAudioDataListener { floatArray ->
             audioChannel.trySend(floatArray)
         }
-        processor.start()
+    }
+
+    fun connectToRepo(audioReactiveRepo: AudioReactiveRepo) {
+        this.audioReactiveRepo = audioReactiveRepo
     }
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(LOG_TAG, "Service started")
+
+        unregisterAudioListener()
 
         startForeground(1, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
 
@@ -141,11 +157,12 @@ class AudioCaptureService : Service() {
     fun spectrumFlow() = processor.spectrumFlow
     fun volumeFlow() = processor.volumeFlow
 
-    private fun stopCaptureAndSelf() {
-        Log.d(LOG_TAG, "Stopping self. Running was: $running")
+    fun stopCapture() {
         if (!running) return
 
         running = false
+
+        stopForeground(STOP_FOREGROUND_DETACH)
 
         captureThread?.interrupt()
         captureThread = null
@@ -155,10 +172,12 @@ class AudioCaptureService : Service() {
             audioRecord.release()
         }
 
-        processor.stop()
+        Log.d(LOG_TAG, "Reattaching to audio player")
+        registerAudioListener()
+    }
 
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
+    private fun unregisterAudioListener() {
+        audioPlayer.unregisterAudioDataListener()
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
@@ -182,6 +201,7 @@ class AudioCaptureService : Service() {
             mediaProjection.unregisterCallback(projectionCallback)
             mediaProjection.stop()
         }
+        unregisterAudioListener()
         super.onDestroy()
     }
 

@@ -27,6 +27,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.compose.rememberNavController
+import com.audioreactive.data.AudioReactiveRepo
 import com.audioreactive.player.AudioPlayer
 import com.audioreactive.service.AudioCaptureService
 import com.audioreactive.ui.navigation.AudioReactiveNavHost
@@ -43,7 +44,6 @@ import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
 @UnstableApi
-@OptIn(UnstableApi::class)
 class MainActivity : ComponentActivity() {
     companion object {
         private const val LOG_TAG: String = "AR.MainActivity"
@@ -55,11 +55,11 @@ class MainActivity : ComponentActivity() {
     private lateinit var latticeViewModel: LatticeViewModel
 
     private val serviceConnection = object : ServiceConnection {
-        @androidx.annotation.OptIn(UnstableApi::class)
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             audioService = (binder as AudioCaptureService.LocalBinder).getService()
             Log.d(LOG_TAG, "Service bound via connection")
             audioService?.connectToAudioPlayer(AudioPlayer.getInstance(this@MainActivity))
+            audioService?.connectToRepo(AudioReactiveRepo.getInstance(this@MainActivity))
             observeSpectrum()
         }
 
@@ -71,7 +71,6 @@ class MainActivity : ComponentActivity() {
 
     private val projectionLauncher = registerForActivityResult(StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK && result.data != null) {
-            AudioPlayer.getInstance(this@MainActivity).unregisterAudioDataListener()
             startAudioService(result.data!!)
         }
     }
@@ -88,6 +87,10 @@ class MainActivity : ComponentActivity() {
 
     fun launchAudioCaptureRequest() {
         requestScreenCaptureAndStartService()
+    }
+
+    fun stopAudioCapture() {
+        audioService?.stopCapture()
     }
 
     fun launchAudioFilePicker() {
