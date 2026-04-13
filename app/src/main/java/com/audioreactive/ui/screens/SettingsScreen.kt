@@ -8,41 +8,43 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import com.audioreactive.ui.navigation.bars.SettingsTopBar
+import com.godaddy.android.colorpicker.HsvColor
+import com.godaddy.android.colorpicker.harmony.ColorHarmonyMode
+import com.godaddy.android.colorpicker.harmony.HarmonyColorPicker
 
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
     onColorSelected: (Color) -> Unit = {}
 ) {
-    var hue by rememberSaveable { mutableFloatStateOf(180f) }
-    var saturation by rememberSaveable { mutableFloatStateOf(1f) }
-    var value by rememberSaveable { mutableFloatStateOf(1f) }
+    var selectedColorArgb by rememberSaveable {
+        mutableIntStateOf(Color.Cyan.toArgb())
+    }
 
-    val selectedColor = remember(hue, saturation, value) {
-        Color.hsv(
-            hue = hue,
-            saturation = saturation,
-            value = value
-        )
+    val selectedColor = remember(selectedColorArgb) {
+        Color(selectedColorArgb)
     }
 
     LaunchedEffect(selectedColor) {
@@ -52,35 +54,37 @@ fun SettingsScreen(
     val scrollState = rememberScrollState()
 
     Scaffold(
+        containerColor = Color.Black,
         topBar = {
-            SettingsTopBar(
-                title = "Settings",
-                onBack = onBack
-            )
+            SettingsTopBar(onBack = onBack)
         }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(Color.Black)
                 .padding(padding)
                 .verticalScroll(scrollState)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = "Visualizer Color",
-                style = MaterialTheme.typography.titleMedium
-            )
-
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF111111)
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Preview")
+                    Text(
+                        text = "Lattice Color",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleSmall
+                    )
 
                     Box(
                         modifier = Modifier
@@ -92,36 +96,12 @@ fun SettingsScreen(
                             )
                     )
 
-                    Column {
-                        Text("Hue: ${hue.toInt()}°")
-                        Slider(
-                            value = hue,
-                            onValueChange = { hue = it },
-                            valueRange = 0f..360f
-                        )
-                    }
-
-                    Column {
-                        Text("Saturation: ${(saturation * 100).toInt()}%")
-                        Slider(
-                            value = saturation,
-                            onValueChange = { saturation = it },
-                            valueRange = 0f..1f
-                        )
-                    }
-
-                    Column {
-                        Text("Brightness: ${(value * 100).toInt()}%")
-                        Slider(
-                            value = value,
-                            onValueChange = { value = it },
-                            valueRange = 0f..1f
-                        )
-                    }
-
-                    Text(
-                        text = "Selected color will be saved and used later.",
-                        style = MaterialTheme.typography.bodyMedium
+                    HarmonyColorPicker(
+                        modifier = Modifier.size(280.dp),
+                        harmonyMode = ColorHarmonyMode.NONE,
+                        onColorChanged = { hsvColor: HsvColor ->
+                            selectedColorArgb = hsvColor.toColor().toArgb()
+                        }
                     )
                 }
             }
