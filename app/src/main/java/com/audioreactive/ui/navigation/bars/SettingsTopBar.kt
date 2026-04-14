@@ -13,16 +13,20 @@ import androidx.compose.ui.graphics.Color
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsTopBar(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    isBackEnabled: Boolean = true
 ) {
     CenterAlignedTopAppBar(
         title = {},
         navigationIcon = {
-            IconButton(onClick = onBack) {
+            IconButton(
+                onClick = onBack,
+                enabled = isBackEnabled
+            ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Go Back",
-                    tint = Color.White
+                    tint = if (isBackEnabled) Color.White else Color.Gray
                 )
             }
         },

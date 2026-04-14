@@ -150,7 +150,9 @@ class MainActivity : ComponentActivity() {
                 Box(modifier = Modifier.fillMaxSize()) {
                     AudioReactiveNavHost(
                         modifier = Modifier.fillMaxSize(),
-                        navController = navController
+                        navController = navController,
+                        latticeViewModel = latticeViewModel,
+                        visualizerViewModel = visualizerViewModel
                     )
 
                     SnackbarHost(

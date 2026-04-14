@@ -7,10 +7,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import com.audioreactive.ui.viewmodel.state.VisualizerBarColorMode
 import kotlinx.coroutines.isActive
 
 @Composable
-fun VisualizerScreenFast(spectrum: FloatArray, modifier: Modifier = Modifier) {
+fun VisualizerScreenFast(
+    spectrum: FloatArray,
+    modifier: Modifier = Modifier,
+    barColorMode: VisualizerBarColorMode = VisualizerBarColorMode.DEFAULT,
+    solidBarColorArgb: Int = Color.Cyan.toArgb()
+) {
     val barCount = 96
     val displayHeights = remember { FloatArray(barCount) }
     val latestSpectrum = remember { mutableStateOf(spectrum) }
@@ -22,6 +29,8 @@ fun VisualizerScreenFast(spectrum: FloatArray, modifier: Modifier = Modifier) {
             withFrameNanos { frame = it }
         }
     }
+
+    val solidBarColor = Color(solidBarColorArgb)
 
     Canvas(modifier = modifier.fillMaxSize()) {
         frame
@@ -41,9 +50,18 @@ fun VisualizerScreenFast(spectrum: FloatArray, modifier: Modifier = Modifier) {
 
             val barHeight = size.height * displayHeights[i]
 
+            val barColor = when (barColorMode) {
+                VisualizerBarColorMode.DEFAULT -> {
+                    Color.hsv(270f * (1f - i.toFloat() / barCount), 1f, 1f, 0.2f)
+                }
+                VisualizerBarColorMode.SOLID -> {
+                    solidBarColor.copy(alpha = 0.2f)
+                }
+            }
+
             drawRect(
-//                color = Color.hsv(0f, 0f, 0.2f + 0.8f * (i.toFloat() / barCount), 1f),
-                color = Color.hsv(270f * (1f - i.toFloat() / barCount), 1f, 1f, 0.2f),
+                // color = Color.hsv(0f, 0f, 0.2f + 0.8f * (i.toFloat() / barCount), 1f),
+                color = barColor,
                 topLeft = Offset(i * barWidth, size.height - barHeight),
                 size = Size(barWidth, barHeight)
             )
@@ -52,7 +70,12 @@ fun VisualizerScreenFast(spectrum: FloatArray, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun VisualizerScreen(spectrum: FloatArray, modifier: Modifier = Modifier) {
+fun VisualizerScreen(
+    spectrum: FloatArray,
+    modifier: Modifier = Modifier,
+    barColorMode: VisualizerBarColorMode = VisualizerBarColorMode.DEFAULT,
+    solidBarColorArgb: Int = Color.Cyan.toArgb()
+) {
     val barCount = 96
     val displayHeights = remember { FloatArray(barCount) }
     // hold latest spectrum so the frame loop can always read it
@@ -65,6 +88,8 @@ fun VisualizerScreen(spectrum: FloatArray, modifier: Modifier = Modifier) {
             withFrameNanos { frame = it }
         }
     }
+
+    val solidBarColor = Color(solidBarColorArgb)
 
     Canvas(modifier = modifier.fillMaxSize()) {
         frame // read so Canvas redraws every frame
@@ -80,8 +105,17 @@ fun VisualizerScreen(spectrum: FloatArray, modifier: Modifier = Modifier) {
 
             val barHeight = size.height * displayHeights[i]
 
+            val barColor = when (barColorMode) {
+                VisualizerBarColorMode.DEFAULT -> {
+                    Color.hsv(270f * (1f - i.toFloat() / barCount), 1f, 1f, .9f)
+                }
+                VisualizerBarColorMode.SOLID -> {
+                    solidBarColor.copy(alpha = 0.9f)
+                }
+            }
+
             drawRect(
-                color = Color.hsv(270f * (1f - i.toFloat() / barCount), 1f, 1f, .9f),
+                color = barColor,
                 topLeft = Offset(i * barWidth, size.height - barHeight),
                 size = Size(barWidth, barHeight)
             )

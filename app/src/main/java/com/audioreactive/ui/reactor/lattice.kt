@@ -300,7 +300,17 @@ class Lattice(
 
     private var color: Color = Color(220 / 255f, 208 / 255f, 255 / 255f, 100 / 255f)
 
+    private var overrideColor: Color? = null
 
+    // Added a color override and default to select colors
+    fun setColorOverride(newColor: Color) {
+        overrideColor = newColor.copy(alpha = color.alpha)
+        color = overrideColor!!
+    }
+
+    fun clearColorOverride() {
+        overrideColor = null
+    }
 
     private val elevenCycle: Array<IntArray> = arrayOf(
         intArrayOf(0, 0),  intArrayOf(1, 0),  intArrayOf(1, 1),  intArrayOf(1, 8),
@@ -487,14 +497,11 @@ class Lattice(
         }
     }
 
-
-
-
     fun update(time: Double, spectrum: FloatArray = FloatArray(0)) {
         computeProjectedVectors(time)
         updateRotation()
         computeProjectedPoints(spectrum)
-        color = computeColor(time)
+        color = overrideColor ?: computeColor(time)
     }
 
     fun setPosition(p: Offset) { position = p }
@@ -502,5 +509,3 @@ class Lattice(
 
 
 }
-
-

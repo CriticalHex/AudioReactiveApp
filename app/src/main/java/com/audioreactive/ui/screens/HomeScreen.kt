@@ -18,7 +18,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import com.audioreactive.ui.components.VisualizerLattice
 import com.audioreactive.ui.components.VisualizerScreen
-import com.audioreactive.ui.components.VisualizerScreenFast
 import com.audioreactive.ui.navigation.bars.AudioReactiveBottomBar
 import com.audioreactive.ui.navigation.bars.AudioReactiveTopBar
 import com.audioreactive.ui.viewmodel.AudioPlayerViewModel
@@ -38,6 +37,7 @@ fun HomeScreen(
     captureRunning: Boolean
 ) {
     val visualizerState by visualizerViewModel.stateFlow.collectAsState()
+    val latticeState by latticeViewModel.stateFlow.collectAsState()
 
     var controlsVisible by remember { mutableStateOf(false) }
     var touchCount by remember { mutableIntStateOf(0) }
@@ -82,16 +82,23 @@ fun HomeScreen(
                     )
                 }
         ) {
-            // Can put this in the settings if you want to swtich between seizure and non seizure modes lmao
+            if (!visualizerState.disableBars) {
+                VisualizerScreen(
+                    spectrum = visualizerState.spectrum,
+                    barColorMode = visualizerState.barColorMode,
+                    solidBarColorArgb = visualizerState.solidBarColorArgb
+                )
+            }
 
-            VisualizerScreen(visualizerState.spectrum)
-//            VisualizerScreenFast(visualizerState.spectrum)
-
-            VisualizerLattice(
-                modifier = Modifier.fillMaxSize(),
-                latticeViewModel = latticeViewModel,
-                spectrum = visualizerState.spectrum,
-            )
+            if (!latticeState.disableLattice) {
+                VisualizerLattice(
+                    modifier = Modifier.fillMaxSize(),
+                    latticeViewModel = latticeViewModel,
+                    spectrum = visualizerState.spectrum,
+                    latticeColorMode = latticeState.latticeColorMode,
+                    solidColorArgb = latticeState.solidColorArgb
+                )
+            }
         }
     }
 }

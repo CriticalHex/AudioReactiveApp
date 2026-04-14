@@ -48,12 +48,13 @@ internal constructor(
                         _savedState.copy(
                             timeInSeconds =
                                 _savedState.accumulatedTimeInSeconds + (
-                                    (intent.currentTimeInNano - _savedState.startTimeInNano!!
-                                ) / 1_000_000_000.0) * TIME_SCALE
+                                        (intent.currentTimeInNano - _savedState.startTimeInNano!!
+                                                ) / 1_000_000_000.0) * TIME_SCALE
                         ).also { _savedState = it }
                     }
                 }
             }
+
             is LatticeIntent.Pause -> {
                 if (_savedState.startTimeInNano != null) {
                     _stateFlow.update {
@@ -62,16 +63,52 @@ internal constructor(
                             accumulatedTimeInSeconds =
                                 _savedState.accumulatedTimeInSeconds + (
                                         (intent.currentTimeInNano - _savedState.startTimeInNano!!
-                                ) / 1_000_000_000.0) * TIME_SCALE
+                                                ) / 1_000_000_000.0) * TIME_SCALE
                         ).also { _savedState = it }
                     }
                 }
             }
-            LatticeIntent.Reset -> _stateFlow.update {
-                _savedState.copy(
-                    startTimeInNano = null,
-                    accumulatedTimeInSeconds = 0.0
-                ).also { _savedState = it }
+
+            LatticeIntent.Reset -> {
+                _stateFlow.update {
+                    _savedState.copy(
+                        startTimeInNano = null,
+                        accumulatedTimeInSeconds = 0.0
+                    ).also { _savedState = it }
+                }
+            }
+
+            // Updates lattice color and visibility
+            is LatticeIntent.SetLatticeColorMode -> {
+                _stateFlow.update {
+                    _savedState.copy(
+                        latticeColorMode = intent.mode
+                    ).also { _savedState = it }
+                }
+            }
+
+            is LatticeIntent.SetSolidColor -> {
+                _stateFlow.update {
+                    _savedState.copy(
+                        solidColorArgb = intent.colorArgb
+                    ).also { _savedState = it }
+                }
+            }
+
+            is LatticeIntent.SetLatticeDisabled -> {
+                _stateFlow.update {
+                    _savedState.copy(
+                        disableLattice = intent.disabled
+                    ).also { _savedState = it }
+                }
+            }
+
+            is LatticeIntent.SetGyrosDisabled -> {
+                _stateFlow.update {
+                    _savedState.copy(
+                        disableGyros = intent.disabled
+                    ).also { _savedState = it }
+                }
             }
         }
     }

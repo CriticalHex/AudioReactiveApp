@@ -5,8 +5,14 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import com.audioreactive.ui.screens.SettingsScreen
+import com.audioreactive.ui.viewmodel.LatticeViewModel
+import com.audioreactive.ui.viewmodel.VisualizerViewModel
 
-object SettingsScreenSpec : IScreenSpec {
+class SettingsScreenSpec(
+    private val latticeViewModel: LatticeViewModel,
+    private val visualizerViewModel: VisualizerViewModel
+) : IScreenSpec {
+
     override val route: String = IScreenSpec.SETTINGS
     override val arguments = emptyList<androidx.navigation.NamedNavArgument>()
 
@@ -17,7 +23,9 @@ object SettingsScreenSpec : IScreenSpec {
         navBackStackEntry: NavBackStackEntry
     ) {
         SettingsScreen(
-            onBack = { navController.popBackStack() }
+            onBack = { navController.popBackStack() },
+            latticeViewModel = latticeViewModel,
+            visualizerViewModel = visualizerViewModel
         )
     }
 }

@@ -7,6 +7,9 @@ import androidx.lifecycle.viewModelScope
 import com.audioreactive.data.AudioReactiveRepo
 import com.audioreactive.ui.viewmodel.effect.VisualizerEffect
 import com.audioreactive.ui.viewmodel.intent.VisualizerIntent
+import com.audioreactive.ui.viewmodel.intent.VisualizerIntent.SetBarColorMode
+import com.audioreactive.ui.viewmodel.intent.VisualizerIntent.SetBarsDisabled
+import com.audioreactive.ui.viewmodel.intent.VisualizerIntent.SetSolidBarColor
 import com.audioreactive.ui.viewmodel.intent.VisualizerIntent.UpdateSpectrum
 import com.audioreactive.ui.viewmodel.intent.VisualizerIntent.UpdateVolume
 import com.audioreactive.ui.viewmodel.state.VisualizerState
@@ -23,7 +26,7 @@ class VisualizerViewModel
 internal constructor(
     private val audioReactiveRepo: AudioReactiveRepo,
     savedStateHandle: SavedStateHandle
-): ViewModel(), IViewModelContract<VisualizerState, VisualizerIntent, VisualizerEffect> {
+) : ViewModel(), IViewModelContract<VisualizerState, VisualizerIntent, VisualizerEffect> {
     companion object {
         private const val LOG_TAG = "AR.VisualizerViewModel"
     }
@@ -36,9 +39,8 @@ internal constructor(
     private val _stateFlow: MutableStateFlow<VisualizerState> = MutableStateFlow(_savedState)
     override val stateFlow: StateFlow<VisualizerState> = _stateFlow
         .combine(audioReactiveRepo.serviceRunning) { currentState, serviceRunning ->
-            // Update the 'running' field from the repo, keep everything else from currentState
             currentState.copy(running = serviceRunning).also {
-                _savedState = it // Keep SavedStateHandle updated
+                _savedState = it
             }
         }.stateIn(
             scope = viewModelScope,
@@ -58,10 +60,36 @@ internal constructor(
                     ).also { _savedState = it }
                 }
             }
+
             is UpdateVolume -> {
                 _stateFlow.update {
                     _savedState.copy(
                         volume = intent.volume
+                    ).also { _savedState = it }
+                }
+            }
+
+            // Updates visualizer bar color and visibility
+            is SetBarColorMode -> {
+                _stateFlow.update {
+                    _savedState.copy(
+                        barColorMode = intent.mode
+                    ).also { _savedState = it }
+                }
+            }
+
+            is SetSolidBarColor -> {
+                _stateFlow.update {
+                    _savedState.copy(
+                        solidBarColorArgb = intent.colorArgb
+                    ).also { _savedState = it }
+                }
+            }
+
+            is SetBarsDisabled -> {
+                _stateFlow.update {
+                    _savedState.copy(
+                        disableBars = intent.disabled
                     ).also { _savedState = it }
                 }
             }
