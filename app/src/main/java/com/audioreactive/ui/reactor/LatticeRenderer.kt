@@ -21,21 +21,22 @@ private const val HUE_CYCLE_SPEED = 20.0
 fun DrawScope.drawLatticeLines(
     l: Lattice,
     maxLines: Int = DEFAULT_MAX_LINES,
-    strokeWidth: Float = 2f,
+    strokeWidth: Float = 1f,
     hueOffset: Float = 0f,
     dimensionCycle: Boolean = false
 ) {
     val pts = l.getProjectedPoints()
     val n = minOf(l.edges.size, maxLines)
+    val dimColors = if (dimensionCycle) {
+        Array(Lattice.DIMENSIONS) { d ->
+            val hue = (hueOffset + d.toFloat() / Lattice.DIMENSIONS * 80f) % 360f
+            Color.hsv(hue, 1f, 1f, 100f / 255f)
+        }
+    } else null
 
     for (k in 0 until n) {
         val (i, j) = l.edges[k]
-        val color = if (dimensionCycle) {
-            val hue = (hueOffset + l.edgeDimensions[k].toFloat() / Lattice.DIMENSIONS * 80f) % 360f
-            Color.hsv(hue, 1f, 1f, 100f / 255f)
-        } else {
-            l.getColor()
-        }
+        val color = dimColors?.get(l.edgeDimensions[k]) ?: l.getColor()
         drawLine(
             color = color,
             start = pts[i],
