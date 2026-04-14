@@ -63,7 +63,7 @@ fun VisualizerScreenFast(
                 // color = Color.hsv(0f, 0f, 0.2f + 0.8f * (i.toFloat() / barCount), 1f),
                 color = barColor,
                 topLeft = Offset(i * barWidth, size.height - barHeight),
-                size = Size(barWidth, barHeight)
+                size = Size(barWidth + 0.5f, barHeight)
             )
         }
     }
@@ -76,9 +76,7 @@ fun VisualizerScreen(
     barColorMode: VisualizerBarColorMode = VisualizerBarColorMode.DEFAULT,
     solidBarColorArgb: Int = Color.Cyan.toArgb()
 ) {
-    val barCount = 96
-    val displayHeights = remember { FloatArray(barCount) }
-    // hold latest spectrum so the frame loop can always read it
+    val displayHeights = remember { FloatArray(1024) }
     val latestSpectrum = remember { mutableStateOf(spectrum) }
     LaunchedEffect(spectrum) { latestSpectrum.value = spectrum }
 
@@ -96,6 +94,7 @@ fun VisualizerScreen(
         val current = latestSpectrum.value
         if (current.isEmpty()) return@Canvas
 
+        val barCount = current.size
         val barWidth = size.width / barCount
 
         for (i in 0 until barCount) {
@@ -117,7 +116,7 @@ fun VisualizerScreen(
             drawRect(
                 color = barColor,
                 topLeft = Offset(i * barWidth, size.height - barHeight),
-                size = Size(barWidth, barHeight)
+                size = Size(barWidth + 0.5f, barHeight)
             )
         }
     }

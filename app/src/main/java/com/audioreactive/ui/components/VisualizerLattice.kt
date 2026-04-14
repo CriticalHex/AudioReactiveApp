@@ -46,6 +46,7 @@ fun VisualizerLattice(
             when (latticeColorMode) {
                 LatticeColorMode.DEFAULT -> l.clearColorOverride()
                 LatticeColorMode.SOLID -> l.setColorOverride(Color(solidColorArgb))
+                LatticeColorMode.DIMENSION_CYCLE -> l.clearColorOverride()
             }
         }
 
@@ -68,7 +69,8 @@ fun VisualizerLattice(
                 timeInSeconds
             },
             timeScale = 1.0,
-            spectrum = spectrum
+            spectrum = spectrum,
+            dimensionCycle = latticeColorMode == LatticeColorMode.DIMENSION_CYCLE
         )
     }
 }

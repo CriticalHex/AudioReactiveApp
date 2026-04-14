@@ -135,13 +135,26 @@ fun SettingsScreen(
                         ) {
                             Text("Solid Color")
                         }
+
+                        Button(
+                            onClick = { onSetLatticeColorMode(LatticeColorMode.DIMENSION_CYCLE) },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor =
+                                    if (latticeState.latticeColorMode == LatticeColorMode.DIMENSION_CYCLE) Color.White else Color.DarkGray,
+                                contentColor =
+                                    if (latticeState.latticeColorMode == LatticeColorMode.DIMENSION_CYCLE) Color.Black else Color.White
+                            )
+                        ) {
+                            Text("Rainbow")
+                        }
                     }
 
                     Text(
-                        text = if (latticeState.latticeColorMode == LatticeColorMode.DEFAULT) {
-                            "The lattice will use its animated default colors."
-                        } else {
-                            "The lattice will use the selected solid color."
+                        text = when (latticeState.latticeColorMode) {
+                            LatticeColorMode.DEFAULT -> "The lattice will use its animated default colors."
+                            LatticeColorMode.SOLID -> "The lattice will use the selected solid color."
+                            LatticeColorMode.DIMENSION_CYCLE -> "Each dimension cycles through the rainbow."
                         },
                         color = Color.White,
                         style = MaterialTheme.typography.bodyMedium

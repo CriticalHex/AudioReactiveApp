@@ -339,6 +339,17 @@ class Lattice(
     fun getColor(): Color = color
     fun getProjectedPoints(): Array<Offset> = _projectedPoints
 
+    val edgeDimensions: IntArray = IntArray(edges.size) { k ->
+        val (i, j) = edges[k]
+        var maxDiff = 0
+        var maxDim = 0
+        for (d in 0 until DIMENSIONS) {
+            val diff = kotlin.math.abs(points[i][d] - points[j][d])
+            if (diff > maxDiff) { maxDiff = diff; maxDim = d }
+        }
+        maxDim
+    }
+
     fun setRotation(matrix: FloatArray) {
         val angle = rotationAngle(matrix).coerceAtMost(MAX_ROTATION_ANGLE)
         if (angle < 1e-4f) { _targetRotation = IDENTITY_MATRIX.copyOf(); return }

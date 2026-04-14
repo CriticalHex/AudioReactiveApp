@@ -5,7 +5,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class LatticeColorMode {
     DEFAULT,
-    SOLID
+    SOLID,
+    DIMENSION_CYCLE
 }
 
 @Serializable
