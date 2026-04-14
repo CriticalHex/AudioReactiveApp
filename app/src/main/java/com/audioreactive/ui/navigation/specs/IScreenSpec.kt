@@ -5,8 +5,6 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
-import com.audioreactive.ui.viewmodel.LatticeViewModel
-import com.audioreactive.ui.viewmodel.VisualizerViewModel
 
 interface IScreenSpec {
     val route: String
@@ -26,14 +24,9 @@ interface IScreenSpec {
 
         val startDestination = HOME
 
-        val allScreens: Map<String, (LatticeViewModel, VisualizerViewModel) -> IScreenSpec> = mapOf(
-            HOME to { _, _ -> HomeScreenSpec },
-            SETTINGS to { latticeViewModel, visualizerViewModel ->
-                SettingsScreenSpec(
-                    latticeViewModel = latticeViewModel,
-                    visualizerViewModel = visualizerViewModel
-                )
-            }
+        val allScreens: Map<String, IScreenSpec> = mapOf(
+            HOME to HomeScreenSpec,
+            SETTINGS to SettingsScreenSpec
         )
     }
 }

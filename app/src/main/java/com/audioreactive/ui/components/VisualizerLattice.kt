@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -15,22 +13,20 @@ import androidx.compose.ui.platform.LocalDensity
 import com.audioreactive.sensor.RotationSensorManager
 import com.audioreactive.ui.reactor.AnimatedLatticeDisplay
 import com.audioreactive.ui.reactor.Lattice
-import com.audioreactive.ui.viewmodel.LatticeViewModel
-import com.audioreactive.ui.viewmodel.intent.LatticeIntent
 import com.audioreactive.ui.viewmodel.state.LatticeColorMode
 
 @Composable
 fun VisualizerLattice(
     modifier: Modifier = Modifier,
-    latticeViewModel: LatticeViewModel,
     spectrum: FloatArray,
+    timeInSeconds: Double,
     latticeColorMode: LatticeColorMode,
-    solidColorArgb: Int
+    solidColorArgb: Int,
+    disableGyros: Boolean,
+    onCalculateTime: (Long) -> Unit
 ) {
-    val state = latticeViewModel.stateFlow.collectAsState()
     val context = LocalContext.current
     val rotationSensorManager = remember { RotationSensorManager(context) }
-    val latticeState by latticeViewModel.stateFlow.collectAsState()
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val density = LocalDensity.current
@@ -53,8 +49,8 @@ fun VisualizerLattice(
             }
         }
 
-        DisposableEffect(latticeState.disableGyros, l) {
-            if (!latticeState.disableGyros) {
+        DisposableEffect(disableGyros, l) {
+            if (!disableGyros) {
                 rotationSensorManager.start { matrix -> l.setRotation(matrix) }
             }
 
@@ -68,8 +64,8 @@ fun VisualizerLattice(
             modifier = Modifier.fillMaxSize(),
             strokeWidth = 1f,
             timeProvider = { now: Long ->
-                latticeViewModel.dispatcher.invoke(LatticeIntent.CalculateTime(now))
-                state.value.timeInSeconds
+                onCalculateTime(now)
+                timeInSeconds
             },
             timeScale = 1.0,
             spectrum = spectrum

@@ -23,7 +23,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,12 +34,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import com.audioreactive.ui.navigation.bars.SettingsTopBar
-import com.audioreactive.ui.viewmodel.LatticeViewModel
-import com.audioreactive.ui.viewmodel.VisualizerViewModel
-import com.audioreactive.ui.viewmodel.intent.LatticeIntent
-import com.audioreactive.ui.viewmodel.intent.VisualizerIntent
 import com.audioreactive.ui.viewmodel.state.LatticeColorMode
+import com.audioreactive.ui.viewmodel.state.LatticeState
 import com.audioreactive.ui.viewmodel.state.VisualizerBarColorMode
+import com.audioreactive.ui.viewmodel.state.VisualizerState
 import com.godaddy.android.colorpicker.HsvColor
 import com.godaddy.android.colorpicker.harmony.ColorHarmonyMode
 import com.godaddy.android.colorpicker.harmony.HarmonyColorPicker
@@ -48,13 +45,17 @@ import com.godaddy.android.colorpicker.harmony.HarmonyColorPicker
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    latticeViewModel: LatticeViewModel,
-    visualizerViewModel: VisualizerViewModel
+    latticeState: LatticeState,
+    visualizerState: VisualizerState,
+    onSetLatticeColorMode: (LatticeColorMode) -> Unit,
+    onSetLatticeSolidColor: (Int) -> Unit,
+    onSetGyrosDisabled: (Boolean) -> Unit,
+    onSetLatticeDisabled: (Boolean) -> Unit,
+    onSetBarColorMode: (VisualizerBarColorMode) -> Unit,
+    onSetSolidBarColor: (Int) -> Unit,
+    onSetBarsDisabled: (Boolean) -> Unit
 ) {
-    val latticeState by latticeViewModel.stateFlow.collectAsState()
-    val visualizerState by visualizerViewModel.stateFlow.collectAsState()
     val scrollState = rememberScrollState()
-
     var backHandled by rememberSaveable { mutableStateOf(false) }
 
     val latticeSelectedColor = remember(latticeState.solidColorArgb) {
@@ -110,11 +111,7 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Button(
-                            onClick = {
-                                latticeViewModel.dispatcher.invoke(
-                                    LatticeIntent.SetLatticeColorMode(LatticeColorMode.DEFAULT)
-                                )
-                            },
+                            onClick = { onSetLatticeColorMode(LatticeColorMode.DEFAULT) },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor =
@@ -127,11 +124,7 @@ fun SettingsScreen(
                         }
 
                         Button(
-                            onClick = {
-                                latticeViewModel.dispatcher.invoke(
-                                    LatticeIntent.SetLatticeColorMode(LatticeColorMode.SOLID)
-                                )
-                            },
+                            onClick = { onSetLatticeColorMode(LatticeColorMode.SOLID) },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor =
@@ -179,11 +172,7 @@ fun SettingsScreen(
                                 modifier = Modifier.size(280.dp),
                                 harmonyMode = ColorHarmonyMode.NONE,
                                 onColorChanged = { hsvColor: HsvColor ->
-                                    latticeViewModel.dispatcher.invoke(
-                                        LatticeIntent.SetSolidColor(
-                                            hsvColor.toColor().toArgb()
-                                        )
-                                    )
+                                    onSetLatticeSolidColor(hsvColor.toColor().toArgb())
                                 }
                             )
                         }
@@ -219,11 +208,7 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Button(
-                            onClick = {
-                                visualizerViewModel.dispatcher.invoke(
-                                    VisualizerIntent.SetBarColorMode(VisualizerBarColorMode.DEFAULT)
-                                )
-                            },
+                            onClick = { onSetBarColorMode(VisualizerBarColorMode.DEFAULT) },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor =
@@ -236,11 +221,7 @@ fun SettingsScreen(
                         }
 
                         Button(
-                            onClick = {
-                                visualizerViewModel.dispatcher.invoke(
-                                    VisualizerIntent.SetBarColorMode(VisualizerBarColorMode.SOLID)
-                                )
-                            },
+                            onClick = { onSetBarColorMode(VisualizerBarColorMode.SOLID) },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor =
@@ -288,11 +269,7 @@ fun SettingsScreen(
                                 modifier = Modifier.size(280.dp),
                                 harmonyMode = ColorHarmonyMode.NONE,
                                 onColorChanged = { hsvColor: HsvColor ->
-                                    visualizerViewModel.dispatcher.invoke(
-                                        VisualizerIntent.SetSolidBarColor(
-                                            hsvColor.toColor().toArgb()
-                                        )
-                                    )
+                                    onSetSolidBarColor(hsvColor.toColor().toArgb())
                                 }
                             )
                         }
@@ -326,31 +303,19 @@ fun SettingsScreen(
                     SettingSwitchRow(
                         title = "Disable Gyros",
                         checked = latticeState.disableGyros,
-                        onCheckedChange = {
-                            latticeViewModel.dispatcher.invoke(
-                                LatticeIntent.SetGyrosDisabled(it)
-                            )
-                        }
+                        onCheckedChange = onSetGyrosDisabled
                     )
 
                     SettingSwitchRow(
                         title = "Disable Lattice",
                         checked = latticeState.disableLattice,
-                        onCheckedChange = {
-                            latticeViewModel.dispatcher.invoke(
-                                LatticeIntent.SetLatticeDisabled(it)
-                            )
-                        }
+                        onCheckedChange = onSetLatticeDisabled
                     )
 
                     SettingSwitchRow(
                         title = "Disable Bars",
                         checked = visualizerState.disableBars,
-                        onCheckedChange = {
-                            visualizerViewModel.dispatcher.invoke(
-                                VisualizerIntent.SetBarsDisabled(it)
-                            )
-                        }
+                        onCheckedChange = onSetBarsDisabled
                     )
                 }
             }
