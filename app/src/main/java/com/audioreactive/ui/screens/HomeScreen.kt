@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -18,27 +17,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import com.audioreactive.ui.components.VisualizerLattice
 import com.audioreactive.ui.components.VisualizerScreen
-import com.audioreactive.ui.components.VisualizerScreenFast
 import com.audioreactive.ui.navigation.bars.AudioReactiveBottomBar
 import com.audioreactive.ui.navigation.bars.AudioReactiveTopBar
-import com.audioreactive.ui.viewmodel.AudioPlayerViewModel
-import com.audioreactive.ui.viewmodel.LatticeViewModel
-import com.audioreactive.ui.viewmodel.VisualizerViewModel
+import com.audioreactive.ui.viewmodel.state.AudioPlayerState
+import com.audioreactive.ui.viewmodel.state.LatticeState
+import com.audioreactive.ui.viewmodel.state.VisualizerState
 import kotlinx.coroutines.delay
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun HomeScreen(
-    audioPlayerViewModel: AudioPlayerViewModel,
-    visualizerViewModel: VisualizerViewModel,
-    latticeViewModel: LatticeViewModel,
+    audioPlayerState: AudioPlayerState,
+    visualizerState: VisualizerState,
+    latticeState: LatticeState,
+    onAudioPrevious: () -> Unit,
+    onAudioTogglePlayback: () -> Unit,
+    onAudioNext: () -> Unit,
+    onLatticeTimeCalculate: (Long) -> Unit,
     onCaptureClick: () -> Unit,
     onPickAudioFile: () -> Unit,
     onOpenSettings: () -> Unit,
     captureRunning: Boolean
 ) {
-    val visualizerState by visualizerViewModel.stateFlow.collectAsState()
-
     var controlsVisible by remember { mutableStateOf(false) }
     var touchCount by remember { mutableIntStateOf(0) }
 
@@ -65,7 +65,10 @@ fun HomeScreen(
         bottomBar = {
             if (controlsVisible) {
                 AudioReactiveBottomBar(
-                    audioPlayerViewModel = audioPlayerViewModel
+                    state = audioPlayerState,
+                    onPrevious = onAudioPrevious,
+                    onTogglePlayback = onAudioTogglePlayback,
+                    onNext = onAudioNext
                 )
             }
         }
@@ -82,16 +85,25 @@ fun HomeScreen(
                     )
                 }
         ) {
-            // Can put this in the settings if you want to swtich between seizure and non seizure modes lmao
+            if (!visualizerState.disableBars) {
+                VisualizerScreen(
+                    spectrum = visualizerState.spectrum,
+                    barColorMode = visualizerState.barColorMode,
+                    solidBarColorArgb = visualizerState.solidBarColorArgb
+                )
+            }
 
-            VisualizerScreen(visualizerState.spectrum)
-//            VisualizerScreenFast(visualizerState.spectrum)
-
-            VisualizerLattice(
-                modifier = Modifier.fillMaxSize(),
-                latticeViewModel = latticeViewModel,
-                spectrum = visualizerState.spectrum,
-            )
+            if (!latticeState.disableLattice) {
+                VisualizerLattice(
+                    modifier = Modifier.fillMaxSize(),
+                    spectrum = visualizerState.spectrum,
+                    timeInSeconds = latticeState.timeInSeconds,
+                    latticeColorMode = latticeState.latticeColorMode,
+                    solidColorArgb = latticeState.solidColorArgb,
+                    disableGyros = latticeState.disableGyros,
+                    onCalculateTime = onLatticeTimeCalculate
+                )
+            }
         }
     }
 }

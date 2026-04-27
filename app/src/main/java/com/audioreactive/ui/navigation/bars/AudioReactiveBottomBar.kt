@@ -2,10 +2,10 @@ package com.audioreactive.ui.navigation.bars
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
@@ -16,21 +16,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.audioreactive.ui.viewmodel.AudioPlayerViewModel
-import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent
+import com.audioreactive.ui.viewmodel.state.AudioPlayerState
 
 @Composable
 fun AudioReactiveBottomBar(
-    audioPlayerViewModel: AudioPlayerViewModel
+    state: AudioPlayerState,
+    onPrevious: () -> Unit,
+    onTogglePlayback: () -> Unit,
+    onNext: () -> Unit
 ) {
-    val state by audioPlayerViewModel.stateFlow.collectAsState()
-
     Surface(
         color = Color.Transparent,
         tonalElevation = 0.dp,
@@ -47,7 +45,7 @@ fun AudioReactiveBottomBar(
                 horizontalArrangement = Arrangement.Center
             ) {
                 IconButton(
-                    onClick = { audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.Previous) }
+                    onClick = onPrevious
                 ) {
                     Icon(
                         imageVector = Icons.Default.SkipPrevious,
@@ -58,7 +56,7 @@ fun AudioReactiveBottomBar(
                 }
 
                 IconButton(
-                    onClick = { audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.TogglePlayback) }
+                    onClick = onTogglePlayback
                 ) {
                     Icon(
                         imageVector = if (state.isPlaying)
@@ -72,7 +70,7 @@ fun AudioReactiveBottomBar(
                 }
 
                 IconButton(
-                    onClick = { audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.Next) }
+                    onClick = onNext
                 ) {
                     Icon(
                         imageVector = Icons.Default.SkipNext,

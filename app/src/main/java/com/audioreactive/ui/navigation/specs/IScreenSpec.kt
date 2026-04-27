@@ -24,7 +24,7 @@ interface IScreenSpec {
 
         val startDestination = HOME
 
-        val allScreens: Map<String, IScreenSpec?> = mapOf(
+        val allScreens: Map<String, IScreenSpec> = mapOf(
             HOME to HomeScreenSpec,
             SETTINGS to SettingsScreenSpec
         )

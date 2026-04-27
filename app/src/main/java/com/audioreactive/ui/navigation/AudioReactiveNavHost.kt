@@ -23,17 +23,15 @@ fun AudioReactiveNavHost(
             startDestination = IScreenSpec.startDestination
         ) {
             IScreenSpec.allScreens.forEach { (_, screen) ->
-                if (screen != null) {
-                    composable(
-                        route = screen.route,
-                        arguments = screen.arguments
-                    ) { navBackStackEntry ->
-                        screen.Content(
-                            modifier = Modifier,
-                            navController = navController,
-                            navBackStackEntry = navBackStackEntry
-                        )
-                    }
+                composable(
+                    route = screen.route,
+                    arguments = screen.arguments
+                ) { navBackStackEntry ->
+                    screen.Content(
+                        modifier = Modifier,
+                        navController = navController,
+                        navBackStackEntry = navBackStackEntry
+                    )
                 }
             }
         }

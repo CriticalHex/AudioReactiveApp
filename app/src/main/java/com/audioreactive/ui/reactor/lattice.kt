@@ -300,7 +300,17 @@ class Lattice(
 
     private var color: Color = Color(220 / 255f, 208 / 255f, 255 / 255f, 100 / 255f)
 
+    private var overrideColor: Color? = null
 
+    // Added a color override and default to select colors
+    fun setColorOverride(newColor: Color) {
+        overrideColor = newColor.copy(alpha = color.alpha)
+        color = overrideColor!!
+    }
+
+    fun clearColorOverride() {
+        overrideColor = null
+    }
 
     private val elevenCycle: Array<IntArray> = arrayOf(
         intArrayOf(0, 0),  intArrayOf(1, 0),  intArrayOf(1, 1),  intArrayOf(1, 8),
@@ -328,6 +338,17 @@ class Lattice(
 
     fun getColor(): Color = color
     fun getProjectedPoints(): Array<Offset> = _projectedPoints
+
+    val edgeDimensions: IntArray = IntArray(edges.size) { k ->
+        val (i, j) = edges[k]
+        var maxDiff = 0
+        var maxDim = 0
+        for (d in 0 until DIMENSIONS) {
+            val diff = kotlin.math.abs(points[i][d] - points[j][d])
+            if (diff > maxDiff) { maxDiff = diff; maxDim = d }
+        }
+        maxDim
+    }
 
     fun setRotation(matrix: FloatArray) {
         val angle = rotationAngle(matrix).coerceAtMost(MAX_ROTATION_ANGLE)
@@ -487,14 +508,11 @@ class Lattice(
         }
     }
 
-
-
-
     fun update(time: Double, spectrum: FloatArray = FloatArray(0)) {
         computeProjectedVectors(time)
         updateRotation()
         computeProjectedPoints(spectrum)
-        color = computeColor(time)
+        color = overrideColor ?: computeColor(time)
     }
 
     fun setPosition(p: Offset) { position = p }
@@ -502,5 +520,3 @@ class Lattice(
 
 
 }
-
-
