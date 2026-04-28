@@ -10,7 +10,7 @@ import android.os.IBinder
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -75,13 +75,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val filePickerLauncher = registerForActivityResult(OpenDocument()) { uri: Uri? ->
-        uri?.let {
+    private val filePickerLauncher = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri> ->
+        if (uris.size == 1) {
             contentResolver.takePersistableUriPermission(
-                it,
+                uris.single(),
                 Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
-            audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.LoadAudio(it))
+            audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.SetAudio(uris.single()))
+        } else {
+            uris.forEach { uri ->
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+                audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.QueueAudio(uri))
+            }
+            audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.Play)
         }
     }
 

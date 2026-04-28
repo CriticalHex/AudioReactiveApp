@@ -7,10 +7,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.serialization.saved
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.Player.COMMAND_PREPARE
 import androidx.media3.exoplayer.ExoPlayer
 import com.audioreactive.ui.viewmodel.effect.AudioPlayerEffect
 import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent
-import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent.LoadAudio
+import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent.SetAudio
 import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent.Next
 import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent.Pause
 import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent.Play
@@ -65,7 +66,8 @@ internal constructor(
 
     override fun handleIntent(intent: AudioPlayerIntent) {
         when (intent) {
-            is LoadAudio -> loadAudio(intent.uri)
+            is SetAudio -> setAudio(intent.uri)
+            is AudioPlayerIntent.QueueAudio -> queueAudio(intent.uri)
             TogglePlayback -> togglePlayback()
             Play -> play()
             Pause -> pause()
@@ -94,11 +96,21 @@ internal constructor(
             _player.stop()
     }
 
-    private fun loadAudio(uri: Uri) {
+    private fun setAudio(uri: Uri) {
         val mediaItem = MediaItem.fromUri(uri)
         _player.setMediaItem(mediaItem)
-        _player.prepare()
-        _player.play()
+        if (_player.isCommandAvailable(COMMAND_PREPARE)) {
+            _player.prepare()
+            _player.play()
+        }
+    }
+
+    private fun queueAudio(uri: Uri) {
+        val mediaItem = MediaItem.fromUri(uri)
+        _player.addMediaItem(mediaItem)
+        if (_player.isCommandAvailable(COMMAND_PREPARE)) {
+            _player.prepare()
+        }
     }
 
     private fun playPrevious() {
