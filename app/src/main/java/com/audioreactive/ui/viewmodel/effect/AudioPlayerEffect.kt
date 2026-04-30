@@ -1,3 +1,7 @@
 package com.audioreactive.ui.viewmodel.effect
 
-class AudioPlayerEffect: AudioReactiveEffect
+import androidx.compose.ui.graphics.ImageBitmap
+
+sealed class AudioPlayerEffect: AudioReactiveEffect {
+    class ImageChanged(val imageBitmap: ImageBitmap?): AudioPlayerEffect()
+}

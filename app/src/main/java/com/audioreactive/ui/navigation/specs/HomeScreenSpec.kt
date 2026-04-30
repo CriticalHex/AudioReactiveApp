@@ -5,7 +5,11 @@ import androidx.annotation.OptIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModelProvider
 import androidx.media3.common.util.UnstableApi
@@ -17,6 +21,8 @@ import com.audioreactive.ui.viewmodel.AudioPlayerViewModel
 import com.audioreactive.ui.viewmodel.AudioReactiveViewModelFactory
 import com.audioreactive.ui.viewmodel.LatticeViewModel
 import com.audioreactive.ui.viewmodel.VisualizerViewModel
+import com.audioreactive.ui.viewmodel.collectInLaunchedEffect
+import com.audioreactive.ui.viewmodel.effect.AudioPlayerEffect
 import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent
 import com.audioreactive.ui.viewmodel.intent.LatticeIntent
 
@@ -62,22 +68,35 @@ object HomeScreenSpec : IScreenSpec {
             )
         )[LatticeViewModel::class.java]
 
-        val audioPlayerState by audioPlayerViewModel.stateFlow.collectAsState()
+        val (audioPlayerState, audioPlayerDispatcher, audioPlayerEffects) =
+            audioPlayerViewModel.use(navBackStackEntry)
         val visualizerState by visualizerViewModel.stateFlow.collectAsState()
         val latticeState by latticeViewModel.stateFlow.collectAsState()
+
+        var albumCover by remember { mutableStateOf<ImageBitmap?>(null) }
+
+        audioPlayerEffects.collectInLaunchedEffect {
+            when (it) {
+                is AudioPlayerEffect.ImageChanged -> {
+                    albumCover = it.imageBitmap
+                }
+                null -> {}
+            }
+        }
 
         HomeScreen(
             audioPlayerState = audioPlayerState,
             visualizerState = visualizerState,
             latticeState = latticeState,
+            albumCover = albumCover,
             onAudioPrevious = {
-                audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.Previous)
+                audioPlayerDispatcher.invoke(AudioPlayerIntent.Previous)
             },
             onAudioTogglePlayback = {
-                audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.TogglePlayback)
+                audioPlayerDispatcher.invoke(AudioPlayerIntent.TogglePlayback)
             },
             onAudioNext = {
-                audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.Next)
+                audioPlayerDispatcher.invoke(AudioPlayerIntent.Next)
             },
             onLatticeTimeCalculate = { now ->
                 latticeViewModel.dispatcher.invoke(LatticeIntent.CalculateTime(now))
@@ -95,7 +114,7 @@ object HomeScreenSpec : IScreenSpec {
                     launchSingleTop = true
                 }
             },
-            captureRunning = visualizerState.running
+            captureRunning = visualizerState.running,
         )
     }
 }

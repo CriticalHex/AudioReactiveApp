@@ -1,5 +1,6 @@
 package com.audioreactive.ui.navigation.bars
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -19,12 +20,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.dp
 import com.audioreactive.ui.viewmodel.state.AudioPlayerState
 
 @Composable
 fun AudioReactiveBottomBar(
     state: AudioPlayerState,
+    albumCover: ImageBitmap?,
     onPrevious: () -> Unit,
     onTogglePlayback: () -> Unit,
     onNext: () -> Unit
@@ -42,8 +45,11 @@ fun AudioReactiveBottomBar(
             contentAlignment = Alignment.Center
         ) {
             Row(
-                horizontalArrangement = Arrangement.Center
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                if (albumCover != null)
+                    Image(modifier = Modifier.size(64.dp), bitmap = albumCover, contentDescription = "Album Art")
                 IconButton(
                     onClick = onPrevious
                 ) {

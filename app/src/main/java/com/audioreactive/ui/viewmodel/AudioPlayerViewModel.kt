@@ -1,11 +1,15 @@
 package com.audioreactive.ui.viewmodel
 
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.serialization.saved
+import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.Player.COMMAND_PREPARE
 import androidx.media3.exoplayer.ExoPlayer
@@ -25,6 +29,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class AudioPlayerViewModel
 internal constructor(
@@ -53,6 +58,26 @@ internal constructor(
                     _savedState.copy(
                         isPlaying = isPlaying
                     ).also { _savedState = it }
+                }
+            }
+
+            override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
+                if (mediaMetadata.artworkData != null) {
+                    Log.d(LOG_TAG, "File has an image")
+                    viewModelScope.launch {
+                        _effectFlow.update {
+                            AudioPlayerEffect.ImageChanged(
+                                BitmapFactory.decodeByteArray(
+                                    mediaMetadata.artworkData!!, 0, mediaMetadata.artworkData!!.size
+                                ).asImageBitmap()
+                            )
+                        }
+                    }
+                } else {
+                    Log.d(LOG_TAG, "File has no image")
+                    _effectFlow.update {
+                        AudioPlayerEffect.ImageChanged(null)
+                    }
                 }
             }
         })

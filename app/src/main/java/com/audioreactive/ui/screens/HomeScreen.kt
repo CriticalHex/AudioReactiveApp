@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import com.audioreactive.ui.components.VisualizerLattice
 import com.audioreactive.ui.components.VisualizerScreen
@@ -37,7 +38,8 @@ fun HomeScreen(
     onCaptureClick: () -> Unit,
     onPickAudioFile: () -> Unit,
     onOpenSettings: () -> Unit,
-    captureRunning: Boolean
+    captureRunning: Boolean,
+    albumCover: ImageBitmap?
 ) {
     var controlsVisible by remember { mutableStateOf(false) }
     var touchCount by remember { mutableIntStateOf(0) }
@@ -66,6 +68,7 @@ fun HomeScreen(
             if (controlsVisible) {
                 AudioReactiveBottomBar(
                     state = audioPlayerState,
+                    albumCover = albumCover,
                     onPrevious = onAudioPrevious,
                     onTogglePlayback = onAudioTogglePlayback,
                     onNext = onAudioNext
