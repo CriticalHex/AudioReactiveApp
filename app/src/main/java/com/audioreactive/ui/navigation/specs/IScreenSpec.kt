@@ -21,7 +21,6 @@ interface IScreenSpec {
         const val ROOT = "root"
         const val HOME = "home"
         const val SETTINGS = "settings"
-
         val startDestination = HOME
 
         val allScreens: Map<String, IScreenSpec> = mapOf(

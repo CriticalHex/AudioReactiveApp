@@ -24,7 +24,7 @@ import kotlinx.coroutines.flow.update
 
 class VisualizerViewModel
 internal constructor(
-    private val audioReactiveRepo: AudioReactiveRepo,
+    audioReactiveRepo: AudioReactiveRepo,
     savedStateHandle: SavedStateHandle
 ) : ViewModel(), IViewModelContract<VisualizerState, VisualizerIntent, VisualizerEffect> {
     companion object {

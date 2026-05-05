@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"
+        tools:ignore="ForegroundServicesPolicy" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <attribution android:tag="@string/empty" android:label="@string/description" />
     <attribution android:tag="audioPlayback" android:label="@string/description" />
     <application
@@ -29,7 +29,7 @@
         <service
             android:name=".service.AudioCaptureService"
             android:foregroundServiceType="mediaProjection"
+            android:description="@string/service_description"
             android:exported="false" />
     </application>
-
 </manifest>

@@ -1,7 +1,6 @@
 package com.audioreactive.player
 
 import android.content.Context
-import android.util.Log
 import androidx.media3.common.C.ENCODING_PCM_FLOAT
 import androidx.media3.common.Player
 import androidx.media3.common.audio.ToInt16PcmAudioProcessor
@@ -13,11 +12,6 @@ import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.audio.TeeAudioProcessor
 import androidx.media3.exoplayer.audio.ToFloatPcmAudioProcessor
 import com.audioreactive.AudioProcessor
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.nio.ByteBuffer
 
 @UnstableApi

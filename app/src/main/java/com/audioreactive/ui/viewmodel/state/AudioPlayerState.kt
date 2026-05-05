@@ -1,6 +1,5 @@
 package com.audioreactive.ui.viewmodel.state
 
-import androidx.compose.ui.graphics.ImageBitmap
 import kotlinx.serialization.Serializable
 
 @Serializable

@@ -29,6 +29,7 @@ class RotationSensorManager(context: Context) {
                 multiplyByTranspose(matrix, reference, relative)
                 onRotation(relative)
             }
+
             override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
         }
         sensorManager.registerListener(listener, rotationSensor, SensorManager.SENSOR_DELAY_GAME)
@@ -39,11 +40,11 @@ class RotationSensorManager(context: Context) {
         listener = null
     }
 
-    private fun multiplyByTranspose(A: FloatArray, B: FloatArray, result: FloatArray) {
+    private fun multiplyByTranspose(matrixA: FloatArray, matrixB: FloatArray, result: FloatArray) {
         for (i in 0 until 3) {
             for (j in 0 until 3) {
                 var sum = 0f
-                for (k in 0 until 3) sum += A[i * 3 + k] * B[j * 3 + k]
+                for (k in 0 until 3) sum += matrixA[i * 3 + k] * matrixB[j * 3 + k]
                 result[i * 3 + j] = sum
             }
         }

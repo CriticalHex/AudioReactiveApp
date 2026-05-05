@@ -47,18 +47,6 @@ fun DrawScope.drawLatticeLines(
 }
 
 @Composable
-fun LatticeDisplay(
-    l: Lattice,
-    modifier: Modifier = Modifier,
-    maxLines: Int = DEFAULT_MAX_LINES,
-    strokeWidth: Float = 1f
-) {
-    Canvas(modifier = modifier.fillMaxSize()) {
-        drawLatticeLines(l, maxLines = maxLines, strokeWidth = strokeWidth)
-    }
-}
-
-@Composable
 fun AnimatedLatticeDisplay(
     l: Lattice,
     modifier: Modifier = Modifier,

@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">AudioReactive</string>
     <string name="description">tell me if you see this string</string>
+    <string name="service_description">Used to record the audio playing on your phone.</string>
     <string name="empty"></string>
 </resources>

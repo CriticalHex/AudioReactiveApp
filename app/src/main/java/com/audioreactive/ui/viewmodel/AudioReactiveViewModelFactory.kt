@@ -9,10 +9,8 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.MutableCreationExtras
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
 import com.audioreactive.data.AudioReactiveRepo
 import com.audioreactive.player.AudioPlayer
-import kotlinx.coroutines.channels.Channel
 
 class AudioReactiveViewModelFactory: ViewModelProvider.Factory {
     companion object {
