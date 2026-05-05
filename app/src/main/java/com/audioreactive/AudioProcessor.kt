@@ -27,7 +27,7 @@ class AudioProcessor(
         private const val LOG_TAG = "AR.AudioProcessor"
         private const val SILENCE_DB = -120f
         private const val FFT_SIZE = 2048
-        private const val NUM_BINS = 96
+        const val NUM_BINS = 96
         private const val MIN_FREQ = 20f
         private const val MAX_FREQ = 20000f
         private const val SAMPLE_RATE = 48000f

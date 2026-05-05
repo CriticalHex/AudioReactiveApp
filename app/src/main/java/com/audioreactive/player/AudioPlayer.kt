@@ -3,6 +3,7 @@ package com.audioreactive.player
 import android.content.Context
 import android.util.Log
 import androidx.media3.common.C.ENCODING_PCM_FLOAT
+import androidx.media3.common.Player
 import androidx.media3.common.audio.ToInt16PcmAudioProcessor
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -11,7 +12,12 @@ import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.audio.TeeAudioProcessor
 import androidx.media3.exoplayer.audio.ToFloatPcmAudioProcessor
+import com.audioreactive.AudioProcessor
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.nio.ByteBuffer
 
 @UnstableApi
@@ -73,5 +79,13 @@ class AudioPlayer private constructor(context: Context) {
         ): AudioSink = audioSink
     }
 
-    val player: ExoPlayer = ExoPlayer.Builder(context, renderersFactory).build()
+    val player: ExoPlayer = ExoPlayer.Builder(context, renderersFactory).build().also {
+        it.addListener(object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (!isPlaying) {
+                    audioDataListener?.invoke(FloatArray(AudioProcessor.NUM_BINS))
+                }
+            }
+        })
+    }
 }

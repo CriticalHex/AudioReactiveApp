@@ -196,8 +196,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun observeSpectrum() {
-        val spectrumFlow = audioService?.spectrumFlow() ?: return
-
         lifecycleScope.launch {
             audioService?.volumeFlow()?.sample(10)?.collect { volume ->
                 visualizerViewModel.dispatcher.invoke(VisualizerIntent.UpdateVolume(volume))
@@ -205,9 +203,7 @@ class MainActivity : ComponentActivity() {
         }
 
         lifecycleScope.launch {
-            combine(spectrumFlow, audioPlayerViewModel.stateFlow) { spectrum, playerState ->
-                if (playerState.isPlaying) spectrum else FloatArray(spectrum.size)
-            }.collect { spectrum ->
+            audioService?.spectrumFlow()?.collect { spectrum ->
                 visualizerViewModel.dispatcher.invoke(VisualizerIntent.UpdateSpectrum(spectrum))
             }
         }
