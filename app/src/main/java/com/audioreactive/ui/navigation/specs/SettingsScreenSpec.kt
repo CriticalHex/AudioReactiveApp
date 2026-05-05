@@ -86,6 +86,21 @@ data object SettingsScreenSpec : IScreenSpec {
                 visualizerViewModel.dispatcher.invoke(
                     com.audioreactive.ui.viewmodel.intent.VisualizerIntent.SetBarsDisabled(it)
                 )
+            },
+            onSetLatticeSpeed = {
+                latticeViewModel.dispatcher.invoke(
+                    com.audioreactive.ui.viewmodel.intent.LatticeIntent.SetSpeed(it)
+                )
+            },
+            onSetLatticeSensitivity = {
+                latticeViewModel.dispatcher.invoke(
+                    com.audioreactive.ui.viewmodel.intent.LatticeIntent.SetSensitivity(it)
+                )
+            },
+            onSetLatticeLineDensity = {
+                latticeViewModel.dispatcher.invoke(
+                    com.audioreactive.ui.viewmodel.intent.LatticeIntent.SetLineDensity(it)
+                )
             }
         )
     }

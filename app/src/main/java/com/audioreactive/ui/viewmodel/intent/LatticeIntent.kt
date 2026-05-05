@@ -1,6 +1,7 @@
 package com.audioreactive.ui.viewmodel.intent
 
 import com.audioreactive.ui.viewmodel.state.LatticeColorMode
+import com.audioreactive.ui.viewmodel.state.LatticeLineDensity
 
 sealed class LatticeIntent : AudioReactiveIntent {
     class CalculateTime(val currentTimeInNano: Long) : LatticeIntent()
@@ -11,4 +12,7 @@ sealed class LatticeIntent : AudioReactiveIntent {
     class SetSolidColor(val colorArgb: Int) : LatticeIntent()
     class SetLatticeDisabled(val disabled: Boolean) : LatticeIntent()
     class SetGyrosDisabled(val disabled: Boolean) : LatticeIntent()
+    class SetSpeed(val speed: Float) : LatticeIntent()
+    class SetSensitivity(val sensitivity: Float) : LatticeIntent()
+    class SetLineDensity(val density: LatticeLineDensity) : LatticeIntent()
 }

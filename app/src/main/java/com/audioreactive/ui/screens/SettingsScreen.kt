@@ -19,6 +19,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -35,6 +37,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import com.audioreactive.ui.navigation.bars.SettingsTopBar
 import com.audioreactive.ui.viewmodel.state.LatticeColorMode
+import com.audioreactive.ui.viewmodel.state.LatticeLineDensity
 import com.audioreactive.ui.viewmodel.state.LatticeState
 import com.audioreactive.ui.viewmodel.state.VisualizerBarColorMode
 import com.audioreactive.ui.viewmodel.state.VisualizerState
@@ -53,7 +56,10 @@ fun SettingsScreen(
     onSetLatticeDisabled: (Boolean) -> Unit,
     onSetBarColorMode: (VisualizerBarColorMode) -> Unit,
     onSetSolidBarColor: (Int) -> Unit,
-    onSetBarsDisabled: (Boolean) -> Unit
+    onSetBarsDisabled: (Boolean) -> Unit,
+    onSetLatticeSpeed: (Float) -> Unit,
+    onSetLatticeSensitivity: (Float) -> Unit,
+    onSetLatticeLineDensity: (LatticeLineDensity) -> Unit
 ) {
     val scrollState = rememberScrollState()
     var backHandled by rememberSaveable { mutableStateOf(false) }
@@ -297,6 +303,70 @@ fun SettingsScreen(
             }
 
             Text(
+                text = "Lattice Animation",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF111111)
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    SettingSliderRow(
+                        title = "Speed",
+                        value = latticeState.speed,
+                        valueRange = 0.05f..2f,
+                        valueLabel = String.format("%.2fx", latticeState.speed),
+                        onValueChange = onSetLatticeSpeed
+                    )
+
+                    SettingSliderRow(
+                        title = "Sensitivity",
+                        value = latticeState.sensitivity,
+                        valueRange = 0.1f..3f,
+                        valueLabel = String.format("%.2fx", latticeState.sensitivity),
+                        onValueChange = onSetLatticeSensitivity
+                    )
+
+                    Text(
+                        text = "Detail (number of edges drawn)",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        DensityButton(
+                            label = "Low",
+                            isSelected = latticeState.lineDensity == LatticeLineDensity.LOW,
+                            onClick = { onSetLatticeLineDensity(LatticeLineDensity.LOW) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        DensityButton(
+                            label = "Medium",
+                            isSelected = latticeState.lineDensity == LatticeLineDensity.MEDIUM,
+                            onClick = { onSetLatticeLineDensity(LatticeLineDensity.MEDIUM) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        DensityButton(
+                            label = "High",
+                            isSelected = latticeState.lineDensity == LatticeLineDensity.HIGH,
+                            onClick = { onSetLatticeLineDensity(LatticeLineDensity.HIGH) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
+            Text(
                 text = "Display Options",
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White
@@ -314,7 +384,7 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
                     SettingSwitchRow(
-                        title = "Disable Gyros",
+                        title = "Disable Gyroscope",
                         checked = latticeState.disableGyros,
                         onCheckedChange = onSetGyrosDisabled
                     )
@@ -333,6 +403,63 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SettingSliderRow(
+    title: String,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    valueLabel: String,
+    onValueChange: (Float) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                color = Color.White,
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = valueLabel,
+                color = Color.White,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            colors = SliderDefaults.colors(
+                thumbColor = Color.White,
+                activeTrackColor = Color.White,
+                inactiveTrackColor = Color.DarkGray
+            )
+        )
+    }
+}
+
+@Composable
+private fun DensityButton(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isSelected) Color.White else Color.DarkGray,
+            contentColor = if (isSelected) Color.Black else Color.White
+        )
+    ) {
+        Text(label)
     }
 }
 

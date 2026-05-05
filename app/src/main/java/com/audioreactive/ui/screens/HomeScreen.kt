@@ -20,6 +20,7 @@ import com.audioreactive.ui.components.VisualizerLattice
 import com.audioreactive.ui.components.VisualizerScreen
 import com.audioreactive.ui.navigation.bars.AudioReactiveBottomBar
 import com.audioreactive.ui.navigation.bars.AudioReactiveTopBar
+import com.audioreactive.ui.viewmodel.LatticeViewModel
 import com.audioreactive.ui.viewmodel.state.AudioPlayerState
 import com.audioreactive.ui.viewmodel.state.LatticeState
 import com.audioreactive.ui.viewmodel.state.VisualizerState
@@ -31,6 +32,7 @@ fun HomeScreen(
     audioPlayerState: AudioPlayerState,
     visualizerState: VisualizerState,
     latticeState: LatticeState,
+    latticeViewModel: LatticeViewModel,
     onAudioPrevious: () -> Unit,
     onAudioTogglePlayback: () -> Unit,
     onAudioNext: () -> Unit,
@@ -103,7 +105,10 @@ fun HomeScreen(
                     timeInSeconds = latticeState.timeInSeconds,
                     latticeColorMode = latticeState.latticeColorMode,
                     solidColorArgb = latticeState.solidColorArgb,
-                    disableGyros = latticeState.disableGyros,
+                    speed = latticeState.speed,
+                    sensitivity = latticeState.sensitivity,
+                    lineDensity = latticeState.lineDensity,
+                    latticeViewModel = latticeViewModel,
                     onCalculateTime = onLatticeTimeCalculate
                 )
             }

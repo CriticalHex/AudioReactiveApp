@@ -40,8 +40,10 @@ class AudioReactiveViewModelFactory: ViewModelProvider.Factory {
                 }
                 isAssignableFrom(LatticeViewModel::class.java) -> {
                     Log.d(LOG_TAG, "creating LatticeViewModel")
+                    val context = checkNotNull(extras[CONTEXT_KEY])
                     val savedStateHandle = extras.createSavedStateHandle()
                     LatticeViewModel(
+                        context.applicationContext,
                         savedStateHandle
                     )
                 }

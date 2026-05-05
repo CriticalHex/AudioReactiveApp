@@ -11,8 +11,8 @@ import kotlin.math.sqrt
 class Lattice(
     x: Int,
     y: Int,
-    private val width: Int,
-    private val height: Int
+    val width: Int,
+    val height: Int
 ) {
 
     companion object {
@@ -189,7 +189,12 @@ class Lattice(
     private val _projectedPoints: Array<Offset> = Array(VERTEX_COUNT) { Offset.Zero }
 
     private var position: Offset = Offset(x.toFloat(), y.toFloat())
-    private var speed: Double = 0.5
+
+    @Volatile
+    var speed: Double = 0.5
+
+    @Volatile
+    var sensitivity: Float = 1f
 
     fun getColor(): Color = color
     fun getProjectedPoints(): Array<Offset> = _projectedPoints
@@ -208,6 +213,7 @@ class Lattice(
     }
 
     fun setRotation(matrix: FloatArray) {
+        for (v in matrix) if (!v.isFinite()) return
         val angle = rotationAngle(matrix).coerceAtMost(MAX_ROTATION_ANGLE)
         if (angle < 1e-4f) {
             _targetRotation = IDENTITY_MATRIX.copyOf(); return
@@ -217,8 +223,11 @@ class Lattice(
         _targetRotation = fromAxisAngle(axis[0], axis[1], axis[2], angle)
     }
 
-    private fun rotationAngle(rotation: FloatArray): Float =
-        acos(((rotation[0] + rotation[4] + rotation[8] - 1f) / 2f).coerceIn(-1f, 1f))
+    private fun rotationAngle(rotation: FloatArray): Float {
+        val raw = (rotation[0] + rotation[4] + rotation[8] - 1f) / 2f
+        if (!raw.isFinite()) return 0f
+        return acos(raw.coerceIn(-1f, 1f))
+    }
 
     private fun rotationAxis(rotation: FloatArray, angle: Float, out: FloatArray) {
         val s = sin(angle.toDouble()).toFloat()
@@ -242,17 +251,9 @@ class Lattice(
     }
 
     private fun updateRotation() {
-        val tAngle = rotationAngle(_targetRotation)
-        if (tAngle > 1e-4f) {
-            rotationAxis(_targetRotation, tAngle, _axisBuffer)
-            _targetRotation =
-                fromAxisAngle(_axisBuffer[0], _axisBuffer[1], _axisBuffer[2], tAngle * 0.97f)
-        } else {
-            _targetRotation = IDENTITY_MATRIX.copyOf()
-        }
-
         val dD = _displayedRotation
         val tR = _targetRotation
+        for (v in tR) if (!v.isFinite()) return
         for (i in 0..2) for (j in 0..2) {
             var sum = 0f
             for (k in 0..2) sum += dD[k * 3 + i] * tR[k * 3 + j]
@@ -344,6 +345,7 @@ class Lattice(
 
     private fun computeProjectedPoints(spectrum: FloatArray) {
         val base = minOf(width, height).toFloat() / 5f
+        val sens = sensitivity.coerceIn(0f, 5f)
 
         for (j in 0 until DIMENSIONS) {
             val target = if (spectrum.isEmpty()) {
@@ -353,7 +355,9 @@ class Lattice(
                 val bandEnd = ((j + 1) * spectrum.size / DIMENSIONS).coerceAtMost(spectrum.size)
                 var sum = 0f
                 for (k in bandStart until bandEnd) sum += spectrum[k]
-                1.0 + (sum / (bandEnd - bandStart)).coerceIn(0f, 1f) * 0.8
+                val mean = if (bandEnd > bandStart) sum / (bandEnd - bandStart) else 0f
+                val safe = if (mean.isFinite()) mean.coerceIn(0f, 1f) else 0f
+                1.0 + safe * 0.8 * sens
             }
             _smoothedDimScales[j] += (target - _smoothedDimScales[j]) * 0.12
         }

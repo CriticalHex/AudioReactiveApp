@@ -1,17 +1,9 @@
 package com.audioreactive.ui.reactor
 
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import kotlin.math.*
 
 private const val DEFAULT_ALPHA = 100f / 255f
 private const val HUE_CYCLE_PERIOD_SECONDS = 5.0
-
-fun dist(p1: Offset, p2: Offset): Double {
-    val dx = (p1.x - p2.x).toDouble()
-    val dy = (p1.y - p2.y).toDouble()
-    return sqrt(dx * dx + dy * dy)
-}
 
 private fun lerpColor(c1: Color, c2: Color, t: Float, alpha: Float = DEFAULT_ALPHA): Color {
     val r = c1.red + t * (c2.red - c1.red)
@@ -39,11 +31,3 @@ fun computeColor(time: Double, alpha: Float = DEFAULT_ALPHA): Color {
     val c2 = colors[(i + 1) % 6]
     return lerpColor(c1, c2, f, alpha)
 }
-
-fun smooth(x: Float): Double = atan(x.toDouble() + 0.2)
-
-
-fun Offset.scale(s: Float): Offset = Offset(x * s, y * s)
-
-
-fun Offset.translate(by: Offset): Offset = this + by

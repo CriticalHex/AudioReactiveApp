@@ -1,10 +1,15 @@
 package com.audioreactive.ui.viewmodel
 
+import android.content.Context
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.serialization.saved
+import com.audioreactive.sensor.RotationSensorManager
+import com.audioreactive.ui.reactor.Lattice
 import com.audioreactive.ui.viewmodel.effect.LatticeEffect
 import com.audioreactive.ui.viewmodel.intent.LatticeIntent
+import com.audioreactive.ui.viewmodel.state.LatticeColorMode
 import com.audioreactive.ui.viewmodel.state.LatticeState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -15,6 +20,7 @@ import kotlinx.coroutines.flow.update
 
 class LatticeViewModel
 internal constructor(
+    appContext: Context,
     savedStateHandle: SavedStateHandle
 ): ViewModel(), IViewModelContract<LatticeState, LatticeIntent, LatticeEffect> {
     companion object {
@@ -32,6 +38,52 @@ internal constructor(
 
     private val _effectFlow: MutableStateFlow<LatticeEffect?> = MutableStateFlow(null)
     override val effectFlow: SharedFlow<LatticeEffect?> = _effectFlow.asSharedFlow()
+
+    private val rotationSensorManager = RotationSensorManager(appContext)
+    private var lattice: Lattice? = null
+    private var sensorRunning = false
+
+    fun getOrCreateLattice(width: Int, height: Int): Lattice {
+        val current = lattice
+        if (current != null && current.width == width && current.height == height) {
+            return current
+        }
+        return Lattice(width / 2, height / 2, width, height).also { l ->
+            l.speed = _savedState.speed.toDouble()
+            l.sensitivity = _savedState.sensitivity
+            when (_savedState.latticeColorMode) {
+                LatticeColorMode.SOLID -> l.setColorOverride(Color(_savedState.solidColorArgb))
+                LatticeColorMode.DEFAULT, LatticeColorMode.DIMENSION_CYCLE ->
+                    l.clearColorOverride()
+            }
+            lattice = l
+        }
+    }
+
+    fun applySensorState() {
+        val l = lattice ?: return
+        val wantRunning = !_savedState.disableGyros
+        if (wantRunning && !sensorRunning) {
+            rotationSensorManager.start { matrix -> l.setRotation(matrix) }
+            sensorRunning = true
+        } else if (!wantRunning && sensorRunning) {
+            rotationSensorManager.stop()
+            sensorRunning = false
+            l.setRotation(Lattice.IDENTITY_MATRIX)
+        }
+    }
+
+    fun stopSensor() {
+        if (sensorRunning) {
+            rotationSensorManager.stop()
+            sensorRunning = false
+        }
+    }
+
+    override fun onCleared() {
+        stopSensor()
+        super.onCleared()
+    }
 
     override fun handleIntent(intent: LatticeIntent) {
         when (intent) {
@@ -78,7 +130,6 @@ internal constructor(
                 }
             }
 
-            // Updates lattice color and visibility
             is LatticeIntent.SetLatticeColorMode -> {
                 _stateFlow.update {
                     _savedState.copy(
@@ -107,6 +158,33 @@ internal constructor(
                 _stateFlow.update {
                     _savedState.copy(
                         disableGyros = intent.disabled
+                    ).also { _savedState = it }
+                }
+                applySensorState()
+            }
+
+            is LatticeIntent.SetSpeed -> {
+                _stateFlow.update {
+                    _savedState.copy(
+                        speed = intent.speed.coerceIn(0.05f, 2f)
+                    ).also { _savedState = it }
+                }
+                lattice?.speed = _savedState.speed.toDouble()
+            }
+
+            is LatticeIntent.SetSensitivity -> {
+                _stateFlow.update {
+                    _savedState.copy(
+                        sensitivity = intent.sensitivity.coerceIn(0.1f, 3f)
+                    ).also { _savedState = it }
+                }
+                lattice?.sensitivity = _savedState.sensitivity
+            }
+
+            is LatticeIntent.SetLineDensity -> {
+                _stateFlow.update {
+                    _savedState.copy(
+                        lineDensity = intent.density
                     ).also { _savedState = it }
                 }
             }

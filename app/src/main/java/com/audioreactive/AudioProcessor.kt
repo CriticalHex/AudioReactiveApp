@@ -102,21 +102,27 @@ class AudioProcessor(
         } else {
             maxVolume *= 0.999f
         }
-        if (maxVolume > 0f) {
-            val denominator = ln1p((alpha * maxVolume).toDouble()).toFloat()
+        val denominator = ln1p((alpha * maxVolume).toDouble()).toFloat()
+        if (maxVolume > 0f && denominator > 1e-9f) {
             for (i in volumes.indices) {
-                volumes[i] = ln1p((alpha * volumes[i]).toDouble()).toFloat() / denominator
+                val raw = ln1p((alpha * volumes[i]).toDouble()).toFloat() / denominator
+                volumes[i] = if (raw.isFinite()) raw else 0f
             }
+        } else {
+            for (i in volumes.indices) volumes[i] = 0f
         }
     }
 
     private fun smoothedPeakVolume(samples: FloatArray): Float {
-        // this is what my c++ program was doing
-        // not sure if it needs to anything other than return samples.maxOf { abs(it) }
-        // since this is magnitude, not whatever windows gives you
-        val peakVolume = samples.maxOf { abs(it) }.toDouble()
-        if (peakVolume <= 1e-6f) return 0f
-        return atan((peakVolume + 0.2f).toFloat())
+        if (samples.isEmpty()) return 0f
+        var peak = 0f
+        for (s in samples) {
+            val a = abs(s)
+            if (a > peak) peak = a
+        }
+        if (peak <= 1e-6f || !peak.isFinite()) return 0f
+        val v = atan(peak + 0.2f)
+        return if (v.isFinite()) v else 0f
     }
 
     private fun processVolume(samples: FloatArray) {
@@ -135,7 +141,8 @@ class AudioProcessor(
         for (i in mags.indices) {
             val re = fftBuffer[2 * i]
             val im = fftBuffer[2 * i + 1]
-            mags[i] = sqrt(re * re + im * im)
+            val m = sqrt(re * re + im * im)
+            mags[i] = if (m.isFinite()) m else 0f
         }
 
         val bins = mapToLogBins(mags)

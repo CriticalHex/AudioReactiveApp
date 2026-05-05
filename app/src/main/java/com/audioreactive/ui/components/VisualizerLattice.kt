@@ -8,12 +8,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import com.audioreactive.sensor.RotationSensorManager
 import com.audioreactive.ui.reactor.AnimatedLatticeDisplay
-import com.audioreactive.ui.reactor.Lattice
+import com.audioreactive.ui.viewmodel.LatticeViewModel
 import com.audioreactive.ui.viewmodel.state.LatticeColorMode
+import com.audioreactive.ui.viewmodel.state.LatticeLineDensity
 
 @Composable
 fun VisualizerLattice(
@@ -22,47 +21,40 @@ fun VisualizerLattice(
     timeInSeconds: Double,
     latticeColorMode: LatticeColorMode,
     solidColorArgb: Int,
-    disableGyros: Boolean,
+    speed: Float,
+    sensitivity: Float,
+    lineDensity: LatticeLineDensity,
+    latticeViewModel: LatticeViewModel,
     onCalculateTime: (Long) -> Unit
 ) {
-    val context = LocalContext.current
-    val rotationSensorManager = remember { RotationSensorManager(context) }
-
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val density = LocalDensity.current
-        val wPx = with(density) { maxWidth.toPx() }
-        val hPx = with(density) { maxHeight.toPx() }
+        val wPx = with(density) { maxWidth.toPx() }.toInt().coerceAtLeast(1)
+        val hPx = with(density) { maxHeight.toPx() }.toInt().coerceAtLeast(1)
 
-        val l = remember(wPx.toInt(), hPx.toInt()) {
-            Lattice(
-                x = (wPx / 2f).toInt(),
-                y = (hPx / 2f).toInt(),
-                width = wPx.toInt(),
-                height = hPx.toInt()
-            )
+        val l = remember(wPx, hPx, latticeViewModel) {
+            latticeViewModel.getOrCreateLattice(wPx, hPx)
         }
 
-        LaunchedEffect(latticeColorMode, solidColorArgb) {
+        LaunchedEffect(l, latticeColorMode, solidColorArgb) {
             when (latticeColorMode) {
-                LatticeColorMode.DEFAULT -> l.clearColorOverride()
                 LatticeColorMode.SOLID -> l.setColorOverride(Color(solidColorArgb))
-                LatticeColorMode.DIMENSION_CYCLE -> l.clearColorOverride()
+                LatticeColorMode.DEFAULT, LatticeColorMode.DIMENSION_CYCLE ->
+                    l.clearColorOverride()
             }
         }
+        LaunchedEffect(l, speed) { l.speed = speed.toDouble() }
+        LaunchedEffect(l, sensitivity) { l.sensitivity = sensitivity }
 
-        DisposableEffect(disableGyros, l) {
-            if (!disableGyros) {
-                rotationSensorManager.start { matrix -> l.setRotation(matrix) }
-            }
-
-            onDispose {
-                rotationSensorManager.stop()
-            }
+        DisposableEffect(latticeViewModel, l) {
+            latticeViewModel.applySensorState()
+            onDispose { latticeViewModel.stopSensor() }
         }
 
         AnimatedLatticeDisplay(
             l = l,
             modifier = Modifier.fillMaxSize(),
+            maxLines = lineDensity.maxLines,
             strokeWidth = 1f,
             timeProvider = { now: Long ->
                 onCalculateTime(now)

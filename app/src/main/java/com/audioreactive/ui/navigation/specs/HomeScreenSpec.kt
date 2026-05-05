@@ -88,6 +88,7 @@ object HomeScreenSpec : IScreenSpec {
             audioPlayerState = audioPlayerState,
             visualizerState = visualizerState,
             latticeState = latticeState,
+            latticeViewModel = latticeViewModel,
             albumCover = albumCover,
             onAudioPrevious = {
                 audioPlayerDispatcher.invoke(AudioPlayerIntent.Previous)
