@@ -39,7 +39,6 @@ import com.audioreactive.ui.viewmodel.LatticeViewModel
 import com.audioreactive.ui.viewmodel.VisualizerViewModel
 import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent
 import com.audioreactive.ui.viewmodel.intent.VisualizerIntent
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
@@ -76,22 +75,27 @@ class MainActivity : ComponentActivity() {
     }
 
     private val filePickerLauncher = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri> ->
-        if (uris.size == 1) {
+        if (uris.isEmpty()) return@registerForActivityResult
+
+        // set the first
+        val first = uris.first()
+        contentResolver.takePersistableUriPermission(
+            first,
+            Intent.FLAG_GRANT_READ_URI_PERMISSION
+        )
+        audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.SetAudio(first))
+
+        // queue the rest
+        uris.drop(1).forEach { uri ->
             contentResolver.takePersistableUriPermission(
-                uris.single(),
+                uri,
                 Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
-            audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.SetAudio(uris.single()))
-        } else {
-            uris.forEach { uri ->
-                contentResolver.takePersistableUriPermission(
-                    uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
-                audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.QueueAudio(uri))
-            }
-            audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.Play)
+            audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.QueueAudio(uri))
         }
+
+        // then play
+        audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.Play)
     }
 
     fun launchAudioCaptureRequest() {
