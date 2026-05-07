@@ -465,6 +465,9 @@ fun SettingsScreen(
             },
             text = {
                 Column(
+                    modifier = Modifier
+                        .height(320.dp)
+                        .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
