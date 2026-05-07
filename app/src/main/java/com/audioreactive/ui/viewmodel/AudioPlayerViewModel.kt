@@ -8,6 +8,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.serialization.saved
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -23,6 +24,8 @@ import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent.Previous
 import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent.Stop
 import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent.TogglePlayback
 import com.audioreactive.ui.viewmodel.state.AudioPlayerState
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,6 +43,8 @@ internal constructor(
         private const val LOG_TAG = "AR.AudioPlayerViewModel"
     }
 
+    private var progressJob: Job? = null
+
     private var _savedState: AudioPlayerState by savedStateHandle.saved(
         key = "SAVED_AUDIO_PLAYER_STATE",
         init = { AudioPlayerState() }
@@ -54,21 +59,47 @@ internal constructor(
     init {
         _player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
-                _stateFlow.update {
-                    _savedState.copy(
-                        isPlaying = isPlaying
-                    ).also { _savedState = it }
+                updatePlaybackState()
+
+                if (isPlaying) {
+                    startProgressUpdates()
+                } else {
+                    stopProgressUpdates()
                 }
             }
 
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                updatePlaybackState()
+            }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                updatePlaybackState()
+            }
+
+            override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
+                updatePlaybackState()
+            }
+
             override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
+                val title = mediaMetadata.title?.toString()
+                    ?: _player.currentMediaItem?.mediaMetadata?.title?.toString()
+                    ?: "Unknown Song"
+
+                _stateFlow.update {
+                    _savedState.copy(
+                        songTitle = title
+                    ).also { _savedState = it }
+                }
+
                 if (mediaMetadata.artworkData != null) {
                     Log.d(LOG_TAG, "File has an image")
                     viewModelScope.launch {
                         _effectFlow.update {
                             AudioPlayerEffect.ImageChanged(
                                 BitmapFactory.decodeByteArray(
-                                    mediaMetadata.artworkData!!, 0, mediaMetadata.artworkData!!.size
+                                    mediaMetadata.artworkData!!,
+                                    0,
+                                    mediaMetadata.artworkData!!.size
                                 ).asImageBitmap()
                             )
                         }
@@ -81,10 +112,13 @@ internal constructor(
                 }
             }
         })
+
+        updatePlaybackState()
     }
 
     override fun onCleared() {
         Log.d(LOG_TAG, "onCleared() called")
+        stopProgressUpdates()
         _player.release()
         super.onCleared()
     }
@@ -103,6 +137,7 @@ internal constructor(
     }
 
     private fun togglePlayback() {
+        if (_player.currentMediaItem == null) return
         if (_player.isPlaying) pause() else play()
     }
 
@@ -124,18 +159,24 @@ internal constructor(
     private fun setAudio(uri: Uri) {
         val mediaItem = MediaItem.fromUri(uri)
         _player.setMediaItem(mediaItem)
+
         if (_player.isCommandAvailable(COMMAND_PREPARE)) {
             _player.prepare()
             _player.play()
         }
+
+        updatePlaybackState()
     }
 
     private fun queueAudio(uri: Uri) {
         val mediaItem = MediaItem.fromUri(uri)
         _player.addMediaItem(mediaItem)
+
         if (_player.isCommandAvailable(COMMAND_PREPARE)) {
             _player.prepare()
         }
+
+        updatePlaybackState()
     }
 
     private fun playPrevious() {
@@ -150,11 +191,56 @@ internal constructor(
     }
 
     private fun playNext() {
-        if (_player.mediaItemCount > 0) {
-            if (_player.hasNextMediaItem()) {
-                _player.seekToNextMediaItem()
-                _player.play()
+        if (_player.mediaItemCount > 0 && _player.hasNextMediaItem()) {
+            _player.seekToNextMediaItem()
+            _player.play()
+        }
+    }
+
+    private fun startProgressUpdates() {
+        if (progressJob?.isActive == true) return
+
+        progressJob = viewModelScope.launch {
+            while (true) {
+                updatePlaybackState()
+                delay(500)
             }
+        }
+    }
+
+    private fun stopProgressUpdates() {
+        progressJob?.cancel()
+        progressJob = null
+        updatePlaybackState()
+    }
+
+    private fun updatePlaybackState() {
+        val duration = if (_player.duration == C.TIME_UNSET || _player.duration <= 0L) {
+            0L
+        } else {
+            _player.duration
+        }
+
+        val position = if (duration > 0L) {
+            _player.currentPosition
+                .coerceAtLeast(0L)
+                .coerceAtMost(duration)
+        } else {
+            0L
+        }
+
+        val title = _player.mediaMetadata.title?.toString()
+            ?: _savedState.songTitle
+
+        _stateFlow.update {
+            _savedState.copy(
+                isPlaying = _player.isPlaying,
+                hasAudioLoaded = _player.currentMediaItem != null,
+                hasNext = _player.hasNextMediaItem(),
+                songTitle = title,
+                currentPositionMs = position,
+                durationMs = duration
+            ).also { _savedState = it }
         }
     }
 }

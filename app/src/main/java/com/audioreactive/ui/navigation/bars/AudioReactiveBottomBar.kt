@@ -3,6 +3,7 @@ package com.audioreactive.ui.navigation.bars
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -15,12 +16,15 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.audioreactive.ui.viewmodel.state.AudioPlayerState
 
@@ -32,58 +36,124 @@ fun AudioReactiveBottomBar(
     onTogglePlayback: () -> Unit,
     onNext: () -> Unit
 ) {
+    val hasAudioLoaded = state.hasAudioLoaded
+
+    val progress = if (state.durationMs > 0L) {
+        (state.currentPositionMs.toFloat() / state.durationMs.toFloat())
+            .coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+
     Surface(
         color = Color.Transparent,
         tonalElevation = 0.dp,
         shadowElevation = 0.dp
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 50.dp)
                 .navigationBarsPadding(),
-            contentAlignment = Alignment.Center
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+
+            // Song title
+            if (state.isPlaying && state.songTitle.isNotBlank()) {
+                Text(
+                    text = state.songTitle,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 32.dp)
+                )
+            }
+
+            // Song progress bar
+            if (state.isPlaying && state.durationMs > 0L) {
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 32.dp),
+                    color = Color.White,
+                    trackColor = Color.DarkGray
+                )
+            }
+
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
             ) {
-                if (albumCover != null)
-                    Image(modifier = Modifier.size(64.dp), bitmap = albumCover, contentDescription = "Album Art")
-                IconButton(
-                    onClick = onPrevious
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SkipPrevious,
-                        contentDescription = "Previous Song",
-                        tint = Color.White,
-                        modifier = Modifier.size(32.dp)
+
+                // Album art stays pinned left
+                if (albumCover != null) {
+                    Image(
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(start = 24.dp)
+                            .size(64.dp),
+                        bitmap = albumCover,
+                        contentDescription = "Album Art"
                     )
                 }
 
-                IconButton(
-                    onClick = onTogglePlayback
+                // Music controls centered
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = if (state.isPlaying)
-                            Icons.Default.Pause
-                        else
-                            Icons.Default.PlayArrow,
-                        contentDescription = "Play/Pause",
-                        tint = Color.White,
-                        modifier = Modifier.size(36.dp)
-                    )
-                }
 
-                IconButton(
-                    onClick = onNext
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SkipNext,
-                        contentDescription = "Next Song",
-                        tint = Color.White,
-                        modifier = Modifier.size(32.dp)
-                    )
+                    IconButton(
+                        enabled = hasAudioLoaded,
+                        onClick = onPrevious
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SkipPrevious,
+                            contentDescription = "Previous Song",
+                            tint = if (hasAudioLoaded)
+                                Color.White
+                            else
+                                Color.Gray,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+
+                    IconButton(
+                        enabled = hasAudioLoaded,
+                        onClick = onTogglePlayback
+                    ) {
+                        Icon(
+                            imageVector =
+                                if (state.isPlaying)
+                                    Icons.Default.Pause
+                                else
+                                    Icons.Default.PlayArrow,
+                            contentDescription = "Play/Pause",
+                            tint = if (hasAudioLoaded)
+                                Color.White
+                            else
+                                Color.Gray,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+
+                    IconButton(
+                        enabled = hasAudioLoaded && state.hasNext,
+                        onClick = onNext
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SkipNext,
+                            contentDescription = "Next Song",
+                            tint =
+                                if (hasAudioLoaded && state.hasNext)
+                                    Color.White
+                                else
+                                    Color.Gray,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
                 }
             }
         }

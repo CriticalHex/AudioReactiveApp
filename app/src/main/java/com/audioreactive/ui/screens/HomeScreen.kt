@@ -4,7 +4,10 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,12 +46,13 @@ fun HomeScreen(
     captureRunning: Boolean,
     albumCover: ImageBitmap?
 ) {
-    var controlsVisible by remember { mutableStateOf(false) }
+    var controlsVisible by remember { mutableStateOf(true) }
     var touchCount by remember { mutableIntStateOf(0) }
+    var showCaptureDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(touchCount, controlsVisible) {
         if (controlsVisible) {
-            delay(3000)
+            delay(6000)
             controlsVisible = false
         }
     }
@@ -60,7 +64,13 @@ fun HomeScreen(
             if (controlsVisible) {
                 AudioReactiveTopBar(
                     captureRunning = captureRunning,
-                    onCaptureClick = onCaptureClick,
+                    onCaptureClick = {
+                        if (!captureRunning) {
+                            showCaptureDialog = true
+                        } else {
+                            onCaptureClick()
+                        }
+                    },
                     onPickAudioFile = onPickAudioFile,
                     onOpenSettings = onOpenSettings
                 )
@@ -113,5 +123,50 @@ fun HomeScreen(
                 )
             }
         }
+    }
+    if (showCaptureDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showCaptureDialog = false
+            },
+            containerColor = Color(0xFF111111),
+            title = {
+                Text(
+                    text = "Start Screen Capture",
+                    color = Color.White
+                )
+            },
+            text = {
+                Text(
+                    text = "Aurora Audio will begin capturing audio from your device. Continue?",
+                    color = Color.White
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showCaptureDialog = false
+                        onCaptureClick()
+                    }
+                ) {
+                    Text(
+                        text = "Start",
+                        color = Color.White
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showCaptureDialog = false
+                    }
+                ) {
+                    Text(
+                        text = "Cancel",
+                        color = Color.Gray
+                    )
+                }
+            }
+        )
     }
 }

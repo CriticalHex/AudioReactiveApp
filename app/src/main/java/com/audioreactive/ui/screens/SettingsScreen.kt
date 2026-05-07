@@ -1,6 +1,7 @@
 package com.audioreactive.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +46,8 @@ import com.audioreactive.ui.viewmodel.state.VisualizerState
 import com.godaddy.android.colorpicker.HsvColor
 import com.godaddy.android.colorpicker.harmony.ColorHarmonyMode
 import com.godaddy.android.colorpicker.harmony.HarmonyColorPicker
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.text.input.TextFieldValue
 
 @Composable
 fun SettingsScreen(
@@ -63,6 +67,8 @@ fun SettingsScreen(
 ) {
     val scrollState = rememberScrollState()
     var backHandled by rememberSaveable { mutableStateOf(false) }
+    var showHowToDialog by rememberSaveable { mutableStateOf(false) }
+    var latticeHexText by rememberSaveable { mutableStateOf("") }
 
     val latticeSelectedColor = remember(latticeState.solidColorArgb) {
         Color(latticeState.solidColorArgb)
@@ -112,39 +118,43 @@ fun SettingsScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Button(
-                            onClick = { onSetLatticeColorMode(LatticeColorMode.DEFAULT) },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor =
-                                    if (latticeState.latticeColorMode == LatticeColorMode.DEFAULT) Color.White else Color.DarkGray,
-                                contentColor =
-                                    if (latticeState.latticeColorMode == LatticeColorMode.DEFAULT) Color.Black else Color.White
-                            )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text("Default")
-                        }
+                            Button(
+                                onClick = { onSetLatticeColorMode(LatticeColorMode.DEFAULT) },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor =
+                                        if (latticeState.latticeColorMode == LatticeColorMode.DEFAULT) Color.White else Color.DarkGray,
+                                    contentColor =
+                                        if (latticeState.latticeColorMode == LatticeColorMode.DEFAULT) Color.Black else Color.White
+                                )
+                            ) {
+                                Text("Default")
+                            }
 
-                        Button(
-                            onClick = { onSetLatticeColorMode(LatticeColorMode.SOLID) },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor =
-                                    if (latticeState.latticeColorMode == LatticeColorMode.SOLID) Color.White else Color.DarkGray,
-                                contentColor =
-                                    if (latticeState.latticeColorMode == LatticeColorMode.SOLID) Color.Black else Color.White
-                            )
-                        ) {
-                            Text("Solid Color")
+                            Button(
+                                onClick = { onSetLatticeColorMode(LatticeColorMode.SOLID) },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor =
+                                        if (latticeState.latticeColorMode == LatticeColorMode.SOLID) Color.White else Color.DarkGray,
+                                    contentColor =
+                                        if (latticeState.latticeColorMode == LatticeColorMode.SOLID) Color.Black else Color.White
+                                )
+                            ) {
+                                Text("Solid Color")
+                            }
                         }
 
                         Button(
                             onClick = { onSetLatticeColorMode(LatticeColorMode.DIMENSION_CYCLE) },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor =
                                     if (latticeState.latticeColorMode == LatticeColorMode.DIMENSION_CYCLE) Color.White else Color.DarkGray,
@@ -195,6 +205,34 @@ fun SettingsScreen(
                                 }
                             )
                         }
+
+                        OutlinedTextField(
+                            value = latticeHexText,
+                            onValueChange = { newValue ->
+                                latticeHexText = newValue
+
+                                parseHexColor(newValue)?.let { color ->
+                                    onSetLatticeSolidColor(color.toArgb())
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = {
+                                Text(
+                                    text = "Hex Color",
+                                    color = Color.White
+                                )
+                            },
+                            placeholder = {
+                                Text(
+                                    text = "#00FFFF",
+                                    color = Color.Gray
+                                )
+                            },
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                color = Color.White
+                            )
+                        )
 
                         Text(
                             text = "Tap the color wheel to choose your solid lattice color.",
@@ -402,7 +440,70 @@ fun SettingsScreen(
                     )
                 }
             }
+            Button(
+                onClick = { showHowToDialog = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    contentColor = Color.Black
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Text("How To Use")
+            }
         }
+    }
+    if (showHowToDialog) {
+        AlertDialog(
+            onDismissRequest = { showHowToDialog = false },
+            containerColor = Color(0xFF111111),
+            title = {
+                Text(
+                    text = "How To Use",
+                    color = Color.White
+                )
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "\u25CF Tap the screen on the visualizer to show the controls.",
+                        color = Color.White
+                    )
+                    Text(
+                        text = "\u25CF Use the top controls to start capture, pick audio, or open settings.",
+                        color = Color.White
+                    )
+                    Text(
+                        text = "\u25CF Lattice Color changes the lattice lines. Default uses animation, Solid Color uses your chosen color, and Rainbow cycles dimensions.",
+                        color = Color.White
+                    )
+                    Text(
+                        text = "\u25CF Visualizer Bar Color changes the audio bars.",
+                        color = Color.White
+                    )
+                    Text(
+                        text = "\u25CF Speed, Sensitivity, and Detail affect the lattice animation.",
+                        color = Color.White
+                    )
+                    Text(
+                        text = "\u25CF Display Options can disable the gyroscope, lattice, or bars.",
+                        color = Color.White
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { showHowToDialog = false }
+                ) {
+                    Text(
+                        text = "Close",
+                        color = Color.White
+                    )
+                }
+            }
+        )
     }
 }
 
@@ -489,5 +590,25 @@ private fun SettingSwitchRow(
                 uncheckedTrackColor = Color.DarkGray
             )
         )
+    }
+}
+
+private fun parseHexColor(input: String): Color? {
+    val cleaned = input
+        .trim()
+        .removePrefix("#")
+
+    if (cleaned.length != 6 && cleaned.length != 8) return null
+
+    return try {
+        val argb = if (cleaned.length == 6) {
+            "FF$cleaned".toLong(16).toInt()
+        } else {
+            cleaned.toLong(16).toInt()
+        }
+
+        Color(argb)
+    } catch (_: NumberFormatException) {
+        null
     }
 }
