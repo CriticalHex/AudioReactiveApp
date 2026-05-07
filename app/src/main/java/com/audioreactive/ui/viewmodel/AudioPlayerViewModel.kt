@@ -80,8 +80,12 @@ internal constructor(
             }
 
             override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
+
+                Log.d(LOG_TAG, "metadata title = ${mediaMetadata.title}")
+
                 val title = mediaMetadata.title?.toString()
                     ?: _player.currentMediaItem?.mediaMetadata?.title?.toString()
+                    ?: _savedState.queueTitles.getOrNull(_player.currentMediaItemIndex)
                     ?: "Unknown Song"
 
                 _stateFlow.update {

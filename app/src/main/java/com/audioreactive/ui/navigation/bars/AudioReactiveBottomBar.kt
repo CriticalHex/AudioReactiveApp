@@ -180,7 +180,6 @@ fun AudioReactiveBottomBar(
     if (showQueueDialog) {
         AlertDialog(
             onDismissRequest = {
-                showQueueDialog = false
                 onQueueDialogVisibilityChange(false)
             },
             containerColor = Color(0xFF111111),
@@ -207,7 +206,6 @@ fun AudioReactiveBottomBar(
                         state.queueTitles.forEachIndexed { index, title ->
                             TextButton(
                                 onClick = {
-                                    showQueueDialog = false
                                     onQueueDialogVisibilityChange(false)
                                     onSelectQueueIndex(index)
                                 },
@@ -246,7 +244,6 @@ fun AudioReactiveBottomBar(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        showQueueDialog = false
                         onQueueDialogVisibilityChange(false)
                         onOpenQueuePicker()
                     }
@@ -260,7 +257,6 @@ fun AudioReactiveBottomBar(
             dismissButton = {
                 TextButton(
                     onClick = {
-                        showQueueDialog = false
                         onQueueDialogVisibilityChange(false)
                     }
                 ) {

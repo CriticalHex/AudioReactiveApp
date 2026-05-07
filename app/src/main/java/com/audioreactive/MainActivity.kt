@@ -42,6 +42,7 @@ import com.audioreactive.ui.viewmodel.intent.VisualizerIntent
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 import android.provider.OpenableColumns
+import com.audioreactive.ui.viewmodel.intent.QueuedAudio
 
 @UnstableApi
 class MainActivity : ComponentActivity() {
@@ -85,7 +86,7 @@ class MainActivity : ComponentActivity() {
                 Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
 
-            com.audioreactive.ui.viewmodel.intent.QueuedAudio(
+            QueuedAudio(
                 uri = uri,
                 title = getFileNameWithoutExtension(uri)
             )
