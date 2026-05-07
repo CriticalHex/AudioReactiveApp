@@ -1,6 +1,6 @@
 [versions]
 activityKtx = "1.13.0"
-agp = "9.2.1"
+agp = "9.1.1"
 firebaseBom = "34.13.0"
 fragmentKtx = "1.8.9"
 jtransforms = "3.2"
