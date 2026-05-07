@@ -15,4 +15,8 @@ sealed class LatticeIntent : AudioReactiveIntent {
     class SetSpeed(val speed: Float) : LatticeIntent()
     class SetSensitivity(val sensitivity: Float) : LatticeIntent()
     class SetLineDensity(val density: LatticeLineDensity) : LatticeIntent()
+    class SetInvertGyroSpin(val invert: Boolean) : LatticeIntent()
+    class SetInvertGyroHorizontal(val invert: Boolean) : LatticeIntent()
+    class SetInvertGyroVertical(val invert: Boolean) : LatticeIntent()
+    object ResetSettings : LatticeIntent()
 }

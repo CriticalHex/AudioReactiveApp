@@ -7,6 +7,7 @@ import kotlin.math.acos
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
+import kotlin.math.tanh
 
 class Lattice(
     x: Int,
@@ -186,6 +187,9 @@ class Lattice(
     private val _tempMatrix = FloatArray(9)
     private val _nextMatrix = FloatArray(9)
 
+    @Volatile
+    private var _lastRotationUpdateNs: Long = System.nanoTime()
+
     private val _projectedPoints: Array<Offset> = Array(VERTEX_COUNT) { Offset.Zero }
 
     private var position: Offset = Offset(x.toFloat(), y.toFloat())
@@ -195,6 +199,18 @@ class Lattice(
 
     @Volatile
     var sensitivity: Float = 1f
+
+    private var _accumulatedPhase: Double = 0.0
+    private var _lastPhaseTime: Double? = null
+
+    @Volatile
+    var invertGyroSpin: Boolean = true
+
+    @Volatile
+    var invertGyroHorizontal: Boolean = true
+
+    @Volatile
+    var invertGyroVertical: Boolean = true
 
     fun getColor(): Color = color
     fun getProjectedPoints(): Array<Offset> = _projectedPoints
@@ -214,13 +230,23 @@ class Lattice(
 
     fun setRotation(matrix: FloatArray) {
         for (v in matrix) if (!v.isFinite()) return
-        val angle = rotationAngle(matrix).coerceAtMost(MAX_ROTATION_ANGLE)
+        _lastRotationUpdateNs = System.nanoTime()
+        val rawAngle = rotationAngle(matrix)
+        val angle = softCapAngle(rawAngle)
         if (angle < 1e-4f) {
             _targetRotation = IDENTITY_MATRIX.copyOf(); return
         }
         val axis = FloatArray(3)
-        rotationAxis(matrix, angle, axis)
+        rotationAxis(matrix, rawAngle, axis)
         _targetRotation = fromAxisAngle(axis[0], axis[1], axis[2], angle)
+    }
+
+    private fun softCapAngle(angle: Float): Float {
+        val threshold = MAX_ROTATION_ANGLE * 0.7f
+        if (angle <= threshold) return angle
+        val padding = MAX_ROTATION_ANGLE * 0.5f
+        val excess = angle - threshold
+        return threshold + padding * tanh((excess / padding).toDouble()).toFloat()
     }
 
     private fun rotationAngle(rotation: FloatArray): Float {
@@ -254,6 +280,14 @@ class Lattice(
         val dD = _displayedRotation
         val tR = _targetRotation
         for (v in tR) if (!v.isFinite()) return
+
+        if (System.nanoTime() - _lastRotationUpdateNs > 250_000_000L) {
+            val pull = 0.04f
+            for (i in 0..8) {
+                tR[i] = tR[i] * (1f - pull) + IDENTITY_MATRIX[i] * pull
+            }
+            renormalize(tR)
+        }
         for (i in 0..2) for (j in 0..2) {
             var sum = 0f
             for (k in 0..2) sum += dD[k * 3 + i] * tR[k * 3 + j]
@@ -306,7 +340,11 @@ class Lattice(
     }
 
     private fun computeProjectedVectors(time: Double) {
-        val scaledTime = time * speed
+        val last = _lastPhaseTime
+        val dt = if (last == null) 0.0 else (time - last).coerceIn(0.0, 1.0)
+        _lastPhaseTime = time
+        _accumulatedPhase += dt * speed
+        val scaledTime = _accumulatedPhase
         for (i in 0 until DIMENSIONS) {
             when (elevenCycle[i][0]) {
                 0 -> {
@@ -347,8 +385,12 @@ class Lattice(
         val base = minOf(width, height).toFloat() / 5f
         val sens = sensitivity.coerceIn(0f, 5f)
 
+        var spectrumEnergy = 0f
+        for (v in spectrum) if (v.isFinite() && v > 0f) spectrumEnergy += v
+        val isQuiet = spectrum.isEmpty() || spectrumEnergy < 0.001f
+
         for (j in 0 until DIMENSIONS) {
-            val target = if (spectrum.isEmpty()) {
+            val target = if (isQuiet) {
                 1.0
             } else {
                 val bandStart = j * spectrum.size / DIMENSIONS
@@ -359,8 +401,19 @@ class Lattice(
                 val safe = if (mean.isFinite()) mean.coerceIn(0f, 1f) else 0f
                 1.0 + safe * 0.8 * sens
             }
-            _smoothedDimScales[j] += (target - _smoothedDimScales[j]) * 0.12
+            val rate = if (isQuiet) 0.18 else 0.12
+            _smoothedDimScales[j] += (target - _smoothedDimScales[j]) * rate
         }
+
+        val rotation = _displayedRotation
+        val spinSign = if (invertGyroSpin) -1.0 else 1.0
+        val horizSign = if (invertGyroHorizontal) -1.0 else 1.0
+        val vertSign = if (invertGyroVertical) -1.0 else 1.0
+        val rollCos = rotation[8].toDouble()
+        val rollSin = -rotation[6].toDouble() * spinSign
+        val yawShift = rotation[3].toDouble() * horizSign
+        val pitchShift = rotation[7].toDouble() * vertSign
+        val parallax = 0.6
 
         for (i in 0 until VERTEX_COUNT) {
             var u = 0.0
@@ -374,13 +427,17 @@ class Lattice(
                 w += p * _projectedVectors[2][j] * _smoothedDimScales[j]
             }
 
-            val rotation = _displayedRotation
-            val xRot = rotation[0] * v + rotation[2] * u + rotation[1] * w
-            val yRot = rotation[6] * v + rotation[8] * u + rotation[7] * w
+            val planeX = v
+            val planeY = u
+            val rolledY = rollCos * planeX - rollSin * planeY
+            val rolledX = rollSin * planeX + rollCos * planeY
+
+            val finalX = rolledX + yawShift * w * parallax
+            val finalY = rolledY + pitchShift * w * parallax
 
             _projectedPoints[i] = Offset(
-                x = position.x + base * xRot.toFloat(),
-                y = position.y + base * yRot.toFloat()
+                x = position.x + base * finalX.toFloat(),
+                y = position.y + base * finalY.toFloat()
             )
         }
     }

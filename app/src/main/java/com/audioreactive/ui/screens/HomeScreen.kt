@@ -104,7 +104,14 @@ fun HomeScreen(
                 VisualizerScreen(
                     spectrum = visualizerState.spectrum,
                     barColorMode = visualizerState.barColorMode,
-                    solidBarColorArgb = visualizerState.solidBarColorArgb
+                    solidBarColorArgb = visualizerState.solidBarColorArgb,
+                    barRiseSpeed = visualizerState.barRiseSpeed,
+                    barFallSpeed = visualizerState.barFallSpeed,
+                    barSensitivity = visualizerState.barSensitivity,
+                    barSoundMode = visualizerState.barSoundMode,
+                    barMaxHeight = visualizerState.barMaxHeight,
+                    barCount = visualizerState.barCount,
+                    barOpacity = visualizerState.barOpacity
                 )
             }
 

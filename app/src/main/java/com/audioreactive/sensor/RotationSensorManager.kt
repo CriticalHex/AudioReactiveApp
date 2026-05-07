@@ -19,7 +19,6 @@ class RotationSensorManager(context: Context) {
         val matrix = FloatArray(9)
         val reference = FloatArray(9)
         val relative = FloatArray(9)
-        val remapped = FloatArray(9)
         var hasReference = false
 
         val driftAlpha = 0.007f
@@ -37,8 +36,7 @@ class RotationSensorManager(context: Context) {
                     renormalize(reference)
                 }
                 multiplyByTranspose(matrix, reference, relative)
-                applyAxisRemap(relative, remapped)
-                onRotation(remapped)
+                onRotation(relative)
             }
 
             override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
@@ -59,15 +57,6 @@ class RotationSensorManager(context: Context) {
                 result[i * 3 + j] = sum
             }
         }
-    }
-
-    private fun applyAxisRemap(r: FloatArray, out: FloatArray) {
-        val a = r[0]; val b = r[1]; val c = r[2]
-        val d = r[3]; val e = r[4]; val f = r[5]
-        val g = r[6]; val h = r[7]; val i = r[8]
-        out[0] =  a; out[1] = -c; out[2] = -b
-        out[3] = -g; out[4] =  i; out[5] =  h
-        out[6] = -d; out[7] =  f; out[8] =  e
     }
 
     private fun renormalize(r: FloatArray) {

@@ -79,15 +79,34 @@ class AudioProcessor(
 
     private fun mapToLogBins(mags: FloatArray): FloatArray {
         val result = FloatArray(NUM_BINS)
-        val ratio = MAX_FREQ / MIN_FREQ
+        val logRatio = log10((MAX_FREQ / MIN_FREQ).toDouble())
+        val maxIdx = mags.size - 1
+
         for (i in 0 until NUM_BINS) {
-            val freq = MIN_FREQ * 10.0.pow((i.toDouble() / (NUM_BINS - 1)) * log10(ratio.toDouble()))
-                .toFloat()
-            val fftIndex = freq / FREQ_PER_BIN
-            val indexLow = fftIndex.toInt().coerceAtMost(mags.size - 1)
-            val indexHigh = (indexLow + 1).coerceAtMost(mags.size - 1)
-            val fraction = fftIndex - indexLow
-            result[i] = (1f - fraction) * mags[indexLow] + fraction * mags[indexHigh]
+            val fracLow = i.toDouble() / NUM_BINS
+            val fracHigh = (i + 1).toDouble() / NUM_BINS
+            val freqLow = MIN_FREQ * 10.0.pow(fracLow * logRatio)
+            val freqHigh = MIN_FREQ * 10.0.pow(fracHigh * logRatio)
+
+            val idxLowF = (freqLow / FREQ_PER_BIN).toFloat()
+            val idxHighF = (freqHigh / FREQ_PER_BIN).toFloat()
+            val intLow = idxLowF.toInt().coerceIn(0, maxIdx)
+            val intHigh = idxHighF.toInt().coerceIn(0, maxIdx)
+
+            result[i] = if (intHigh - intLow >= 1) {
+                var maxVal = 0f
+                for (k in intLow..intHigh) {
+                    val v = mags[k]
+                    if (v > maxVal) maxVal = v
+                }
+                maxVal
+            } else {
+                val center = (idxLowF + idxHighF) * 0.5f
+                val cLow = center.toInt().coerceIn(0, maxIdx)
+                val cHigh = (cLow + 1).coerceAtMost(maxIdx)
+                val frac = center - cLow
+                (1f - frac) * mags[cLow] + frac * mags[cHigh]
+            }
         }
         return result
     }

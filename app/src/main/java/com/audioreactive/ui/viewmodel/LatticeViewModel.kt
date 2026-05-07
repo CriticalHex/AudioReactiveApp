@@ -10,6 +10,7 @@ import com.audioreactive.ui.reactor.Lattice
 import com.audioreactive.ui.viewmodel.effect.LatticeEffect
 import com.audioreactive.ui.viewmodel.intent.LatticeIntent
 import com.audioreactive.ui.viewmodel.state.LatticeColorMode
+import com.audioreactive.ui.viewmodel.state.LatticeDefaults
 import com.audioreactive.ui.viewmodel.state.LatticeState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -51,6 +52,9 @@ internal constructor(
         return Lattice(width / 2, height / 2, width, height).also { l ->
             l.speed = _savedState.speed.toDouble()
             l.sensitivity = _savedState.sensitivity
+            l.invertGyroSpin = _savedState.invertGyroSpin
+            l.invertGyroHorizontal = _savedState.invertGyroHorizontal
+            l.invertGyroVertical = _savedState.invertGyroVertical
             when (_savedState.latticeColorMode) {
                 LatticeColorMode.SOLID -> l.setColorOverride(Color(_savedState.solidColorArgb))
                 LatticeColorMode.DEFAULT, LatticeColorMode.DIMENSION_CYCLE ->
@@ -187,6 +191,63 @@ internal constructor(
                         lineDensity = intent.density
                     ).also { _savedState = it }
                 }
+            }
+
+            is LatticeIntent.SetInvertGyroSpin -> {
+                _stateFlow.update {
+                    _savedState.copy(
+                        invertGyroSpin = intent.invert
+                    ).also { _savedState = it }
+                }
+                lattice?.invertGyroSpin = _savedState.invertGyroSpin
+            }
+
+            is LatticeIntent.SetInvertGyroHorizontal -> {
+                _stateFlow.update {
+                    _savedState.copy(
+                        invertGyroHorizontal = intent.invert
+                    ).also { _savedState = it }
+                }
+                lattice?.invertGyroHorizontal = _savedState.invertGyroHorizontal
+            }
+
+            is LatticeIntent.SetInvertGyroVertical -> {
+                _stateFlow.update {
+                    _savedState.copy(
+                        invertGyroVertical = intent.invert
+                    ).also { _savedState = it }
+                }
+                lattice?.invertGyroVertical = _savedState.invertGyroVertical
+            }
+
+            LatticeIntent.ResetSettings -> {
+                _stateFlow.update {
+                    _savedState.copy(
+                        latticeColorMode = LatticeDefaults.COLOR_MODE,
+                        solidColorArgb = LatticeDefaults.SOLID_COLOR_ARGB,
+                        disableLattice = LatticeDefaults.DISABLE_LATTICE,
+                        disableGyros = LatticeDefaults.DISABLE_GYROS,
+                        speed = LatticeDefaults.SPEED,
+                        sensitivity = LatticeDefaults.SENSITIVITY,
+                        lineDensity = LatticeDefaults.LINE_DENSITY,
+                        invertGyroSpin = LatticeDefaults.INVERT_GYRO_SPIN,
+                        invertGyroHorizontal = LatticeDefaults.INVERT_GYRO_HORIZONTAL,
+                        invertGyroVertical = LatticeDefaults.INVERT_GYRO_VERTICAL
+                    ).also { _savedState = it }
+                }
+                lattice?.let { l ->
+                    l.speed = _savedState.speed.toDouble()
+                    l.sensitivity = _savedState.sensitivity
+                    l.invertGyroSpin = _savedState.invertGyroSpin
+                    l.invertGyroHorizontal = _savedState.invertGyroHorizontal
+                    l.invertGyroVertical = _savedState.invertGyroVertical
+                    when (_savedState.latticeColorMode) {
+                        LatticeColorMode.SOLID -> l.setColorOverride(Color(_savedState.solidColorArgb))
+                        LatticeColorMode.DEFAULT, LatticeColorMode.DIMENSION_CYCLE ->
+                            l.clearColorOverride()
+                    }
+                }
+                applySensorState()
             }
         }
     }
