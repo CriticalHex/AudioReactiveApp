@@ -169,11 +169,17 @@ internal constructor(
     }
 
     private fun queueAudio(uri: Uri) {
+        val shouldStartPlaying = _player.mediaItemCount == 0
+
         val mediaItem = MediaItem.fromUri(uri)
         _player.addMediaItem(mediaItem)
 
         if (_player.isCommandAvailable(COMMAND_PREPARE)) {
             _player.prepare()
+        }
+
+        if (shouldStartPlaying) {
+            _player.play()
         }
 
         updatePlaybackState()

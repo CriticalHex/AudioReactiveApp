@@ -77,25 +77,16 @@ class MainActivity : ComponentActivity() {
     private val filePickerLauncher = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri> ->
         if (uris.isEmpty()) return@registerForActivityResult
 
-        // set the first
-        val first = uris.first()
-        contentResolver.takePersistableUriPermission(
-            first,
-            Intent.FLAG_GRANT_READ_URI_PERMISSION
-        )
-        audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.SetAudio(first))
-
-        // queue the rest
-        uris.drop(1).forEach { uri ->
+        uris.forEach { uri ->
             contentResolver.takePersistableUriPermission(
                 uri,
                 Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
-            audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.QueueAudio(uri))
-        }
 
-        // then play
-        audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.Play)
+            audioPlayerViewModel.dispatcher.invoke(
+                AudioPlayerIntent.QueueAudio(uri)
+            )
+        }
     }
 
     fun launchAudioCaptureRequest() {
