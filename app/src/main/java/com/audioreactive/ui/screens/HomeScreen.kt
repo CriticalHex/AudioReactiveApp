@@ -44,15 +44,18 @@ fun HomeScreen(
     onPickAudioFile: () -> Unit,
     onOpenSettings: () -> Unit,
     captureRunning: Boolean,
-    albumCover: ImageBitmap?
+    albumCover: ImageBitmap?,
+    onAddSongsToQueue: () -> Unit,
+    onSelectQueueIndex: (Int) -> Unit
 ) {
     var controlsVisible by remember { mutableStateOf(true) }
     var touchCount by remember { mutableIntStateOf(0) }
     var showCaptureDialog by remember { mutableStateOf(false) }
+    var queueDialogOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(touchCount, controlsVisible) {
         if (controlsVisible) {
-            delay(6000)
+            delay(4500)
             controlsVisible = false
         }
     }
@@ -77,13 +80,16 @@ fun HomeScreen(
             }
         },
         bottomBar = {
-            if (controlsVisible) {
+            if (controlsVisible || queueDialogOpen) {
                 AudioReactiveBottomBar(
                     state = audioPlayerState,
                     albumCover = albumCover,
                     onPrevious = onAudioPrevious,
                     onTogglePlayback = onAudioTogglePlayback,
-                    onNext = onAudioNext
+                    onNext = onAudioNext,
+                    onOpenQueuePicker = onAddSongsToQueue,
+                    onSelectQueueIndex = onSelectQueueIndex,
+                    onQueueDialogVisibilityChange = { queueDialogOpen = it }
                 )
             }
         }

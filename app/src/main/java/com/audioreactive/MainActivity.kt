@@ -41,6 +41,8 @@ import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent
 import com.audioreactive.ui.viewmodel.intent.VisualizerIntent
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
+import android.provider.OpenableColumns
+import com.audioreactive.ui.viewmodel.intent.QueuedAudio
 
 @UnstableApi
 class MainActivity : ComponentActivity() {
@@ -52,6 +54,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var audioPlayerViewModel: AudioPlayerViewModel
     private lateinit var visualizerViewModel: VisualizerViewModel
     private lateinit var latticeViewModel: LatticeViewModel
+    private var appendToQueue = false
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -77,14 +80,27 @@ class MainActivity : ComponentActivity() {
     private val filePickerLauncher = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri> ->
         if (uris.isEmpty()) return@registerForActivityResult
 
-        uris.forEach { uri ->
+        val songs = uris.map { uri ->
             contentResolver.takePersistableUriPermission(
                 uri,
                 Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
 
+            QueuedAudio(
+                uri = uri,
+                title = getFileNameWithoutExtension(uri)
+            )
+        }
+
+        if (appendToQueue) {
+            songs.forEach { song ->
+                audioPlayerViewModel.dispatcher.invoke(
+                    AudioPlayerIntent.QueueAudio(song)
+                )
+            }
+        } else {
             audioPlayerViewModel.dispatcher.invoke(
-                AudioPlayerIntent.QueueAudio(uri)
+                AudioPlayerIntent.SetQueue(songs)
             )
         }
     }
@@ -95,10 +111,6 @@ class MainActivity : ComponentActivity() {
 
     fun stopAudioCapture() {
         audioService?.stopCapture()
-    }
-
-    fun launchAudioFilePicker() {
-        filePickerLauncher.launch(arrayOf("audio/*"))
     }
 
     private fun enableFullScreen() {
@@ -214,5 +226,28 @@ class MainActivity : ComponentActivity() {
         super.onStop()
         Log.d(LOG_TAG, "Stopped, isFinishing is $isFinishing")
         if (isFinishing) audioPlayerViewModel.dispatcher.invoke(AudioPlayerIntent.Pause)
+    }
+
+    fun launchAudioFilePicker() {
+        appendToQueue = false
+        filePickerLauncher.launch(arrayOf("audio/*"))
+    }
+
+    fun launchQueueFilePicker() {
+        appendToQueue = true
+        filePickerLauncher.launch(arrayOf("audio/*"))
+    }
+
+    private fun getFileNameWithoutExtension(uri: Uri): String {
+        val displayName = contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (nameIndex >= 0 && cursor.moveToFirst()) {
+                cursor.getString(nameIndex)
+            } else {
+                null
+            }
+        } ?: uri.lastPathSegment ?: "Unknown Song"
+
+        return displayName.substringBeforeLast(".")
     }
 }

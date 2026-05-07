@@ -646,7 +646,12 @@ private fun GeneralTab(
             containerColor = Color(0xFF111111),
             title = { Text("How To Use", color = Color.White) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(
+                    modifier = Modifier
+                        .height(320.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     Text("● Tap the screen on the visualizer to show the controls.", color = Color.White)
                     Text("● Use the top controls to start capture, pick audio, or open settings.", color = Color.White)
                     Text("● Lattice tab: change lattice color, animation speed, audio sensitivity, and detail.", color = Color.White)

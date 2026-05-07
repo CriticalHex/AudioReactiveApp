@@ -116,6 +116,12 @@ object HomeScreenSpec : IScreenSpec {
                 }
             },
             captureRunning = visualizerState.running,
+            onAddSongsToQueue = { mainActivity.launchQueueFilePicker() },
+            onSelectQueueIndex = { index ->
+                audioPlayerViewModel.dispatcher.invoke(
+                    AudioPlayerIntent.SelectQueueIndex(index)
+                )
+            }
         )
     }
 }

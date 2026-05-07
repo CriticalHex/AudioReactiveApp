@@ -1,7 +1,6 @@
 package com.audioreactive.ui.viewmodel
 
 import android.graphics.BitmapFactory
-import android.net.Uri
 import android.util.Log
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.SavedStateHandle
@@ -16,13 +15,13 @@ import androidx.media3.common.Player.COMMAND_PREPARE
 import androidx.media3.exoplayer.ExoPlayer
 import com.audioreactive.ui.viewmodel.effect.AudioPlayerEffect
 import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent
-import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent.SetAudio
 import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent.Next
 import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent.Pause
 import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent.Play
 import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent.Previous
 import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent.Stop
 import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent.TogglePlayback
+import com.audioreactive.ui.viewmodel.intent.QueuedAudio
 import com.audioreactive.ui.viewmodel.state.AudioPlayerState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -81,8 +80,12 @@ internal constructor(
             }
 
             override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
+
+                Log.d(LOG_TAG, "metadata title = ${mediaMetadata.title}")
+
                 val title = mediaMetadata.title?.toString()
                     ?: _player.currentMediaItem?.mediaMetadata?.title?.toString()
+                    ?: _savedState.queueTitles.getOrNull(_player.currentMediaItemIndex)
                     ?: "Unknown Song"
 
                 _stateFlow.update {
@@ -125,8 +128,9 @@ internal constructor(
 
     override fun handleIntent(intent: AudioPlayerIntent) {
         when (intent) {
-            is SetAudio -> setAudio(intent.uri)
-            is AudioPlayerIntent.QueueAudio -> queueAudio(intent.uri)
+            is AudioPlayerIntent.SetQueue -> setQueue(intent.songs)
+            is AudioPlayerIntent.QueueAudio -> queueAudio(intent.song)
+            is AudioPlayerIntent.SelectQueueIndex -> selectQueueIndex(intent.index)
             TogglePlayback -> togglePlayback()
             Play -> play()
             Pause -> pause()
@@ -156,10 +160,23 @@ internal constructor(
             _player.stop()
     }
 
-    private fun setAudio(uri: Uri) {
-        val mediaItem = MediaItem.fromUri(uri)
-        _player.setMediaItem(mediaItem)
+    private fun createMediaItem(song: QueuedAudio): MediaItem {
+        return MediaItem.Builder()
+            .setUri(song.uri)
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(song.title)
+                    .build()
+            )
+            .build()
+    }
 
+    private fun setQueue(songs: List<QueuedAudio>) {
+        if (songs.isEmpty()) return
+
+        val mediaItems = songs.map { createMediaItem(it) }
+
+        _player.setMediaItems(mediaItems)
         if (_player.isCommandAvailable(COMMAND_PREPARE)) {
             _player.prepare()
             _player.play()
@@ -168,11 +185,10 @@ internal constructor(
         updatePlaybackState()
     }
 
-    private fun queueAudio(uri: Uri) {
+    private fun queueAudio(song: QueuedAudio) {
         val shouldStartPlaying = _player.mediaItemCount == 0
 
-        val mediaItem = MediaItem.fromUri(uri)
-        _player.addMediaItem(mediaItem)
+        _player.addMediaItem(createMediaItem(song))
 
         if (_player.isCommandAvailable(COMMAND_PREPARE)) {
             _player.prepare()
@@ -183,6 +199,14 @@ internal constructor(
         }
 
         updatePlaybackState()
+    }
+
+    private fun selectQueueIndex(index: Int) {
+        if (index in 0 until _player.mediaItemCount) {
+            _player.seekTo(index, 0L)
+            _player.play()
+            updatePlaybackState()
+        }
     }
 
     private fun playPrevious() {
@@ -238,12 +262,26 @@ internal constructor(
         val title = _player.mediaMetadata.title?.toString()
             ?: _savedState.songTitle
 
+        val queueTitles = (0 until _player.mediaItemCount).map { index ->
+            _player.getMediaItemAt(index).mediaMetadata.title?.toString()
+                ?: _player.getMediaItemAt(index).localConfiguration?.uri?.lastPathSegment
+                ?: "Unknown Song"
+        }
+
+        val currentIndex = if (_player.currentMediaItemIndex >= 0) {
+            _player.currentMediaItemIndex
+        } else {
+            0
+        }
+
         _stateFlow.update {
             _savedState.copy(
                 isPlaying = _player.isPlaying,
                 hasAudioLoaded = _player.currentMediaItem != null,
                 hasNext = _player.hasNextMediaItem(),
                 songTitle = title,
+                queueTitles = queueTitles,
+                currentQueueIndex = currentIndex,
                 currentPositionMs = position,
                 durationMs = duration
             ).also { _savedState = it }
