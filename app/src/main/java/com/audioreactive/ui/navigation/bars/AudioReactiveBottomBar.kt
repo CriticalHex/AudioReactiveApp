@@ -71,7 +71,7 @@ fun AudioReactiveBottomBar(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 50.dp)
+                .padding(bottom = 10.dp)
                 .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)

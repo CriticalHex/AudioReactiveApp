@@ -55,7 +55,7 @@ fun HomeScreen(
 
     LaunchedEffect(touchCount, controlsVisible) {
         if (controlsVisible) {
-            delay(6000)
+            delay(4500)
             controlsVisible = false
         }
     }

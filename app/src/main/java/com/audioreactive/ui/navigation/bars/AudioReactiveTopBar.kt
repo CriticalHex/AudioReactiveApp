@@ -32,7 +32,7 @@ fun AudioReactiveTopBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 25.dp)
+                .padding(top = 10.dp)
                 .height(64.dp)
         ) {
 
