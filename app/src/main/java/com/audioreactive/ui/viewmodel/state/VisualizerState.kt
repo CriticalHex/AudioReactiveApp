@@ -36,7 +36,7 @@ data class VisualizerState(
     val spectrum: FloatArray = FloatArray(0),
     val volume: Float = 0f,
     val running: Boolean = false,
-    val customImage: Boolean = false,
+    val customImage: Boolean = VisualizerDefaults.CUSTOM_IMAGE,
     val barColorMode: VisualizerBarColorMode = VisualizerDefaults.BAR_COLOR_MODE,
     val solidBarColorArgb: Int = VisualizerDefaults.SOLID_BAR_COLOR_ARGB,
     val disableBars: Boolean = VisualizerDefaults.DISABLE_BARS,
@@ -56,6 +56,7 @@ data class VisualizerState(
 
         if (volume != other.volume) return false
         if (running != other.running) return false
+        if (customImage != other.customImage) return false
         if (solidBarColorArgb != other.solidBarColorArgb) return false
         if (disableBars != other.disableBars) return false
         if (barRiseSpeed != other.barRiseSpeed) return false
@@ -74,6 +75,7 @@ data class VisualizerState(
     override fun hashCode(): Int {
         var result = volume.hashCode()
         result = 31 * result + running.hashCode()
+        result = 31 * result + customImage.hashCode()
         result = 31 * result + solidBarColorArgb
         result = 31 * result + disableBars.hashCode()
         result = 31 * result + barRiseSpeed.hashCode()

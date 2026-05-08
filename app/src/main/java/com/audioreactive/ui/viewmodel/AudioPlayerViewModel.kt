@@ -95,7 +95,6 @@ internal constructor(
                 }
 
                 if (mediaMetadata.artworkData != null) {
-                    Log.d(LOG_TAG, "File has an image")
                     viewModelScope.launch {
                         _effectFlow.update {
                             AudioPlayerEffect.ImageChanged(
@@ -108,7 +107,6 @@ internal constructor(
                         }
                     }
                 } else {
-                    Log.d(LOG_TAG, "File has no image")
                     _effectFlow.update {
                         AudioPlayerEffect.ImageChanged(null)
                     }
@@ -120,7 +118,6 @@ internal constructor(
     }
 
     override fun onCleared() {
-        Log.d(LOG_TAG, "onCleared() called")
         stopProgressUpdates()
         _player.release()
         super.onCleared()

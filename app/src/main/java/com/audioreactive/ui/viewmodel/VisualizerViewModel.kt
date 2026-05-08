@@ -47,7 +47,6 @@ internal constructor(
     init {
         viewModelScope.launch(Dispatchers.IO) {
             audioReactiveRepo.getSettingsFlow().collectLatest { settings ->
-                Log.d(LOG_TAG, "Background image: ${settings.customImage}")
                 _stateFlow.update { state ->
                     state.copy(
                         customImage = settings.customImage,
@@ -63,15 +62,14 @@ internal constructor(
                         barOpacity = settings.barOpacity,
                     ).also { _savedState = it }
                 }
-                Log.d(LOG_TAG, "State background image: ${_savedState.customImage}")
             }
         }
     }
 
     private val _stateFlow: MutableStateFlow<VisualizerState> = MutableStateFlow(_savedState)
     override val stateFlow: StateFlow<VisualizerState> =
-        _stateFlow.combine(audioReactiveRepo.serviceRunning) { _, serviceRunning ->
-            _savedState.copy(running = serviceRunning, customImage = _savedState.customImage).also {
+        _stateFlow.combine(audioReactiveRepo.serviceRunning) { currentState, serviceRunning ->
+            currentState.copy(running = serviceRunning).also {
                 _savedState = it
             }
         }.stateIn(
@@ -107,8 +105,6 @@ internal constructor(
         when (intent) {
             is UpdateSpectrum -> {
                 _stateFlow.update {
-                    if (!_savedState.customImage)
-                        Log.d(LOG_TAG, "Overriding custom image via spectrum")
                     _savedState.copy(
                         spectrum = intent.spectrum
                     ).also { _savedState = it }
@@ -117,8 +113,6 @@ internal constructor(
 
             is UpdateVolume -> {
                 _stateFlow.update {
-                    if (!_savedState.customImage)
-                        Log.d(LOG_TAG, "Overriding custom image via volume")
                     _savedState.copy(
                         volume = intent.volume
                     ).also { _savedState = it }

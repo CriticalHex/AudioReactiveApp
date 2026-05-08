@@ -1,6 +1,5 @@
 package com.audioreactive.ui.navigation.specs
 
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.annotation.OptIn
 import androidx.compose.runtime.Composable
@@ -86,8 +85,6 @@ object HomeScreenSpec : IScreenSpec {
                 null -> {}
             }
         }
-
-//        Log.d(LOG_TAG, "Background image: ${visualizerState.customImage}")
 
         HomeScreen(
             audioPlayerState = audioPlayerState,
