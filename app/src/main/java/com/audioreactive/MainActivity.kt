@@ -7,6 +7,7 @@ import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.IBinder
+import android.provider.OpenableColumns
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -27,6 +28,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.compose.rememberNavController
+import coil3.imageLoader
+import coil3.key.Keyer
+import coil3.memory.MemoryCache
 import com.audioreactive.data.AudioReactiveRepo
 import com.audioreactive.player.AudioPlayer
 import com.audioreactive.service.AudioCaptureService
@@ -38,11 +42,11 @@ import com.audioreactive.ui.viewmodel.AudioReactiveViewModelFactory
 import com.audioreactive.ui.viewmodel.LatticeViewModel
 import com.audioreactive.ui.viewmodel.VisualizerViewModel
 import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent
+import com.audioreactive.ui.viewmodel.intent.QueuedAudio
 import com.audioreactive.ui.viewmodel.intent.VisualizerIntent
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
-import android.provider.OpenableColumns
-import com.audioreactive.ui.viewmodel.intent.QueuedAudio
+import java.io.File
 
 @UnstableApi
 class MainActivity : ComponentActivity() {
@@ -102,6 +106,27 @@ class MainActivity : ComponentActivity() {
             audioPlayerViewModel.dispatcher.invoke(
                 AudioPlayerIntent.SetQueue(songs)
             )
+        }
+    }
+
+    val photoPickerLauncher = registerForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let { fileUri ->
+            val inputStream = contentResolver.openInputStream(fileUri)
+            val file = File(filesDir, VisualizerViewModel.CUSTOM_IMAGE_NAME)
+
+            // CRAZY thing to get AsyncImage to see the same file as new
+            // the debugging I did to find out what it uses as a key was wild
+            imageLoader.memoryCache?.remove(MemoryCache.Key(file.toURI().toString()))
+
+            inputStream?.use { input ->
+                file.outputStream().use { output ->
+                    input.copyTo(output)
+                    visualizerViewModel.dispatcher.invoke(VisualizerIntent.SetBackgroundImage(true))
+                }
+            }
+
         }
     }
 

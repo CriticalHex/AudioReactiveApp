@@ -1,5 +1,6 @@
 package com.audioreactive.ui.navigation.specs
 
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.annotation.OptIn
 import androidx.compose.runtime.Composable
@@ -25,6 +26,8 @@ import com.audioreactive.ui.viewmodel.collectInLaunchedEffect
 import com.audioreactive.ui.viewmodel.effect.AudioPlayerEffect
 import com.audioreactive.ui.viewmodel.intent.AudioPlayerIntent
 import com.audioreactive.ui.viewmodel.intent.LatticeIntent
+
+private const val LOG_TAG = "AR.HomeScreenSpec"
 
 object HomeScreenSpec : IScreenSpec {
     override val route: String = IScreenSpec.HOME
@@ -83,6 +86,8 @@ object HomeScreenSpec : IScreenSpec {
                 null -> {}
             }
         }
+
+//        Log.d(LOG_TAG, "Background image: ${visualizerState.customImage}")
 
         HomeScreen(
             audioPlayerState = audioPlayerState,

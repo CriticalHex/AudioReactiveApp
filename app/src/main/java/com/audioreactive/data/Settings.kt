@@ -23,6 +23,7 @@ data class Settings(
     val invertGyroSpin: Boolean = LatticeDefaults.INVERT_GYRO_SPIN,
     val invertGyroHorizontal: Boolean = LatticeDefaults.INVERT_GYRO_HORIZONTAL,
     val invertGyroVertical: Boolean = LatticeDefaults.INVERT_GYRO_VERTICAL,
+    val customImage: Boolean = VisualizerDefaults.CUSTOM_IMAGE,
     val barColorMode: VisualizerBarColorMode = VisualizerDefaults.BAR_COLOR_MODE,
     val solidBarColorArgb: Int = VisualizerDefaults.SOLID_BAR_COLOR_ARGB,
     val disableBars: Boolean = VisualizerDefaults.DISABLE_BARS,
@@ -33,5 +34,5 @@ data class Settings(
     val barMaxHeight: Float = VisualizerDefaults.BAR_MAX_HEIGHT,
     val barCount: Int = VisualizerDefaults.BAR_COUNT,
     val barOpacity: Float = VisualizerDefaults.BAR_OPACITY,
-    @PrimaryKey val id: Int = 1
+    @PrimaryKey val id: Int = 1,
 )

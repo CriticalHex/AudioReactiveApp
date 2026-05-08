@@ -1,6 +1,7 @@
 package com.audioreactive.ui.screens
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,15 +20,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import coil3.compose.AsyncImage
 import com.audioreactive.ui.components.VisualizerLattice
 import com.audioreactive.ui.components.VisualizerScreen
 import com.audioreactive.ui.navigation.bars.AudioReactiveBottomBar
 import com.audioreactive.ui.navigation.bars.AudioReactiveTopBar
 import com.audioreactive.ui.viewmodel.LatticeViewModel
+import com.audioreactive.ui.viewmodel.VisualizerViewModel
 import com.audioreactive.ui.viewmodel.state.AudioPlayerState
 import com.audioreactive.ui.viewmodel.state.LatticeState
 import com.audioreactive.ui.viewmodel.state.VisualizerState
 import kotlinx.coroutines.delay
+import java.io.File
+
+private const val LOG_TAG = "AR.HomeScreen"
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
@@ -107,6 +115,14 @@ fun HomeScreen(
                     )
                 }
         ) {
+            if (visualizerState.customImage) {
+                AsyncImage(
+                    model = File(LocalContext.current.filesDir, VisualizerViewModel.CUSTOM_IMAGE_NAME),
+                    contentDescription = "Custom Background",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
             if (!visualizerState.disableBars) {
                 VisualizerScreen(
                     spectrum = visualizerState.spectrum,

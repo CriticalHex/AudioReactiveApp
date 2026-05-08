@@ -1,12 +1,15 @@
 package com.audioreactive.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.serialization.saved
 import androidx.lifecycle.viewModelScope
+import com.audioreactive.MainActivity
 import com.audioreactive.data.AudioReactiveRepo
 import com.audioreactive.ui.viewmodel.effect.VisualizerEffect
 import com.audioreactive.ui.viewmodel.intent.VisualizerIntent
+import com.audioreactive.ui.viewmodel.intent.VisualizerIntent.SetBackgroundImage
 import com.audioreactive.ui.viewmodel.intent.VisualizerIntent.SetBarColorMode
 import com.audioreactive.ui.viewmodel.intent.VisualizerIntent.SetBarFallSpeed
 import com.audioreactive.ui.viewmodel.intent.VisualizerIntent.SetBarRiseSpeed
@@ -35,6 +38,7 @@ internal constructor(
 ) : ViewModel(), IViewModelContract<VisualizerState, VisualizerIntent, VisualizerEffect> {
     companion object {
         private const val LOG_TAG = "AR.VisualizerViewModel"
+        const val CUSTOM_IMAGE_NAME = "custom_background.jpg"
     }
 
     private var _savedState: VisualizerState by savedStateHandle.saved(
@@ -43,8 +47,10 @@ internal constructor(
     init {
         viewModelScope.launch(Dispatchers.IO) {
             audioReactiveRepo.getSettingsFlow().collectLatest { settings ->
+                Log.d(LOG_TAG, "Background image: ${settings.customImage}")
                 _stateFlow.update { state ->
                     state.copy(
+                        customImage = settings.customImage,
                         barColorMode = settings.barColorMode,
                         solidBarColorArgb = settings.solidBarColorArgb,
                         disableBars = settings.disableBars,
@@ -57,14 +63,15 @@ internal constructor(
                         barOpacity = settings.barOpacity,
                     ).also { _savedState = it }
                 }
+                Log.d(LOG_TAG, "State background image: ${_savedState.customImage}")
             }
         }
     }
 
     private val _stateFlow: MutableStateFlow<VisualizerState> = MutableStateFlow(_savedState)
     override val stateFlow: StateFlow<VisualizerState> =
-        _stateFlow.combine(audioReactiveRepo.serviceRunning) { currentState, serviceRunning ->
-            currentState.copy(running = serviceRunning).also {
+        _stateFlow.combine(audioReactiveRepo.serviceRunning) { _, serviceRunning ->
+            _savedState.copy(running = serviceRunning, customImage = _savedState.customImage).also {
                 _savedState = it
             }
         }.stateIn(
@@ -80,6 +87,7 @@ internal constructor(
         viewModelScope.launch(Dispatchers.IO) {
             audioReactiveRepo.updateSettings(
                 audioReactiveRepo.getSettings().copy(
+                    customImage = state.customImage,
                     barColorMode = state.barColorMode,
                     solidBarColorArgb = state.solidBarColorArgb,
                     disableBars = state.disableBars,
@@ -99,6 +107,8 @@ internal constructor(
         when (intent) {
             is UpdateSpectrum -> {
                 _stateFlow.update {
+                    if (!_savedState.customImage)
+                        Log.d(LOG_TAG, "Overriding custom image via spectrum")
                     _savedState.copy(
                         spectrum = intent.spectrum
                     ).also { _savedState = it }
@@ -107,10 +117,20 @@ internal constructor(
 
             is UpdateVolume -> {
                 _stateFlow.update {
+                    if (!_savedState.customImage)
+                        Log.d(LOG_TAG, "Overriding custom image via volume")
                     _savedState.copy(
                         volume = intent.volume
                     ).also { _savedState = it }
                 }
+            }
+
+            is SetBackgroundImage -> {
+                updateSettings(
+                    _savedState.copy(
+                        customImage = intent.customImage
+                    )
+                )
             }
 
             // Updates visualizer bar color and visibility

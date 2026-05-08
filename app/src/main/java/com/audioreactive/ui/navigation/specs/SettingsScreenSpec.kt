@@ -1,14 +1,20 @@
 package com.audioreactive.ui.navigation.specs
 
 import androidx.activity.ComponentActivity
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.OptIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModelProvider
+import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
+import com.audioreactive.MainActivity
 import com.audioreactive.ui.screens.SettingsScreen
 import com.audioreactive.ui.viewmodel.AudioReactiveViewModelFactory
 import com.audioreactive.ui.viewmodel.LatticeViewModel
@@ -21,6 +27,7 @@ data object SettingsScreenSpec : IScreenSpec {
     override val route: String = IScreenSpec.SETTINGS
     override val arguments = emptyList<NamedNavArgument>()
 
+    @OptIn(UnstableApi::class)
     @Composable
     override fun Content(
         modifier: Modifier,
@@ -29,6 +36,7 @@ data object SettingsScreenSpec : IScreenSpec {
     ) {
         val context = LocalContext.current
         val activity = context as ComponentActivity
+        val mainActivity = activity as MainActivity
 
         val latticeViewModel = ViewModelProvider(
             store = activity.viewModelStore,
@@ -162,6 +170,16 @@ data object SettingsScreenSpec : IScreenSpec {
                 visualizerViewModel.dispatcher.invoke(
                     VisualizerIntent.ResetSettings
                 )
+            },
+            onSetBackgroundImage = {
+                mainActivity.photoPickerLauncher.launch(
+                    PickVisualMediaRequest.Builder().setMediaType(
+                        ActivityResultContracts.PickVisualMedia.SingleMimeType(MimeTypes.IMAGE_JPEG)
+                    ).build()
+                )
+            },
+            onRemoveBackgroundImage = {
+                visualizerViewModel.dispatcher.invoke(VisualizerIntent.SetBackgroundImage(false))
             }
         )
     }

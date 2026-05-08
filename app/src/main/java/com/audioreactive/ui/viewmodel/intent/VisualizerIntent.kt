@@ -6,6 +6,7 @@ import com.audioreactive.ui.viewmodel.state.VisualizerBarSoundMode
 sealed class VisualizerIntent : AudioReactiveIntent {
     class UpdateSpectrum(val spectrum: FloatArray) : VisualizerIntent()
     class UpdateVolume(val volume: Float) : VisualizerIntent()
+    class SetBackgroundImage(val customImage: Boolean) : VisualizerIntent()
 
     class SetBarColorMode(val mode: VisualizerBarColorMode) : VisualizerIntent()
     class SetSolidBarColor(val colorArgb: Int) : VisualizerIntent()

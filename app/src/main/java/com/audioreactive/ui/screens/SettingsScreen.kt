@@ -72,6 +72,8 @@ fun SettingsScreen(
     onSetLatticeSpeed: (Float) -> Unit,
     onSetLatticeSensitivity: (Float) -> Unit,
     onSetLatticeLineDensity: (LatticeLineDensity) -> Unit,
+    onSetBackgroundImage: () -> Unit,
+    onRemoveBackgroundImage: () -> Unit,
     onSetBarRiseSpeed: (Float) -> Unit,
     onSetBarFallSpeed: (Float) -> Unit,
     onSetBarSensitivity: (Float) -> Unit,
@@ -82,7 +84,7 @@ fun SettingsScreen(
     onSetInvertGyroSpin: (Boolean) -> Unit,
     onSetInvertGyroHorizontal: (Boolean) -> Unit,
     onSetInvertGyroVertical: (Boolean) -> Unit,
-    onResetToDefaults: () -> Unit
+    onResetToDefaults: () -> Unit,
 ) {
     var backHandled by rememberSaveable { mutableStateOf(false) }
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
@@ -158,7 +160,9 @@ fun SettingsScreen(
                     visualizerState = visualizerState,
                     onSetLatticeDisabled = onSetLatticeDisabled,
                     onSetBarsDisabled = onSetBarsDisabled,
-                    onResetToDefaults = onResetToDefaults
+                    onResetToDefaults = onResetToDefaults,
+                    onSetBackgroundImage = onSetBackgroundImage,
+                    onRemoveBackgroundImage = onRemoveBackgroundImage,
                 )
             }
         }
@@ -567,7 +571,9 @@ private fun GeneralTab(
     visualizerState: VisualizerState,
     onSetLatticeDisabled: (Boolean) -> Unit,
     onSetBarsDisabled: (Boolean) -> Unit,
-    onResetToDefaults: () -> Unit
+    onResetToDefaults: () -> Unit,
+    onSetBackgroundImage: () -> Unit,
+    onRemoveBackgroundImage: () -> Unit
 ) {
     val scrollState = rememberScrollState()
     var showHowToDialog by rememberSaveable { mutableStateOf(false) }
@@ -603,6 +609,26 @@ private fun GeneralTab(
             ),
             shape = RoundedCornerShape(16.dp)
         ) { Text("How To Use") }
+
+        Button(
+            onClick = onSetBackgroundImage,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.White,
+                contentColor = Color.Black
+            ),
+            shape = RoundedCornerShape(16.dp)
+        ) { Text("Set Background Image") }
+
+        Button(
+            onClick = onRemoveBackgroundImage,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.White,
+                contentColor = Color.Black
+            ),
+            shape = RoundedCornerShape(16.dp)
+        ) { Text("Remove Background Image") }
 
         Button(
             onClick = { showResetConfirm = true },

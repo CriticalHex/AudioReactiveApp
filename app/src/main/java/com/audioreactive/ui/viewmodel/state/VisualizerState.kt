@@ -16,6 +16,7 @@ enum class VisualizerBarSoundMode {
 }
 
 object VisualizerDefaults {
+    const val CUSTOM_IMAGE: Boolean = false
     const val BAR_RISE_SPEED: Float = 1f
     const val BAR_FALL_SPEED: Float = 1f
     const val BAR_SENSITIVITY: Float = 1f
@@ -35,6 +36,7 @@ data class VisualizerState(
     val spectrum: FloatArray = FloatArray(0),
     val volume: Float = 0f,
     val running: Boolean = false,
+    val customImage: Boolean = false,
     val barColorMode: VisualizerBarColorMode = VisualizerDefaults.BAR_COLOR_MODE,
     val solidBarColorArgb: Int = VisualizerDefaults.SOLID_BAR_COLOR_ARGB,
     val disableBars: Boolean = VisualizerDefaults.DISABLE_BARS,
