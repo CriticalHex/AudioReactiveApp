@@ -17,32 +17,53 @@ import com.audioreactive.ui.viewmodel.intent.VisualizerIntent.UpdateSpectrum
 import com.audioreactive.ui.viewmodel.intent.VisualizerIntent.UpdateVolume
 import com.audioreactive.ui.viewmodel.state.VisualizerDefaults
 import com.audioreactive.ui.viewmodel.state.VisualizerState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class VisualizerViewModel
 internal constructor(
-    audioReactiveRepo: AudioReactiveRepo,
-    savedStateHandle: SavedStateHandle
+    val audioReactiveRepo: AudioReactiveRepo, savedStateHandle: SavedStateHandle
 ) : ViewModel(), IViewModelContract<VisualizerState, VisualizerIntent, VisualizerEffect> {
     companion object {
         private const val LOG_TAG = "AR.VisualizerViewModel"
     }
 
     private var _savedState: VisualizerState by savedStateHandle.saved(
-        key = "SAVED_VISUALIZER_STATE",
-        init = { VisualizerState() }
-    )
+        key = "SAVED_VISUALIZER_STATE", init = { VisualizerState() })
+
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            audioReactiveRepo.getSettingsFlow().collectLatest { settings ->
+                _stateFlow.update { state ->
+                    state.copy(
+                        barColorMode = settings.barColorMode,
+                        solidBarColorArgb = settings.solidBarColorArgb,
+                        disableBars = settings.disableBars,
+                        barRiseSpeed = settings.barRiseSpeed,
+                        barFallSpeed = settings.barFallSpeed,
+                        barSensitivity = settings.barSensitivity,
+                        barSoundMode = settings.barSoundMode,
+                        barMaxHeight = settings.barMaxHeight,
+                        barCount = settings.barCount,
+                        barOpacity = settings.barOpacity,
+                    ).also { _savedState = it }
+                }
+            }
+        }
+    }
 
     private val _stateFlow: MutableStateFlow<VisualizerState> = MutableStateFlow(_savedState)
-    override val stateFlow: StateFlow<VisualizerState> = _stateFlow
-        .combine(audioReactiveRepo.serviceRunning) { currentState, serviceRunning ->
+    override val stateFlow: StateFlow<VisualizerState> =
+        _stateFlow.combine(audioReactiveRepo.serviceRunning) { currentState, serviceRunning ->
             currentState.copy(running = serviceRunning).also {
                 _savedState = it
             }
@@ -54,6 +75,25 @@ internal constructor(
 
     private val _effectFlow: MutableStateFlow<VisualizerEffect?> = MutableStateFlow(null)
     override val effectFlow: SharedFlow<VisualizerEffect?> = _effectFlow.asSharedFlow()
+
+    private fun updateSettings(state: VisualizerState) {
+        viewModelScope.launch(Dispatchers.IO) {
+            audioReactiveRepo.updateSettings(
+                audioReactiveRepo.getSettings().copy(
+                    barColorMode = state.barColorMode,
+                    solidBarColorArgb = state.solidBarColorArgb,
+                    disableBars = state.disableBars,
+                    barRiseSpeed = state.barRiseSpeed,
+                    barFallSpeed = state.barFallSpeed,
+                    barSensitivity = state.barSensitivity,
+                    barSoundMode = state.barSoundMode,
+                    barMaxHeight = state.barMaxHeight,
+                    barCount = state.barCount,
+                    barOpacity = state.barOpacity,
+                )
+            )
+        }
+    }
 
     override fun handleIntent(intent: VisualizerIntent) {
         when (intent) {
@@ -75,90 +115,89 @@ internal constructor(
 
             // Updates visualizer bar color and visibility
             is SetBarColorMode -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         barColorMode = intent.mode
-                    ).also { _savedState = it }
-                }
+                    )
+                )
             }
 
             is SetSolidBarColor -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         solidBarColorArgb = intent.colorArgb
-                    ).also { _savedState = it }
-                }
+                    )
+                )
             }
 
             is SetBarsDisabled -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         disableBars = intent.disabled
-                    ).also { _savedState = it }
-                }
+                    )
+                )
             }
 
             is SetBarRiseSpeed -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         barRiseSpeed = intent.speed.coerceIn(0.1f, 3f)
-                    ).also { _savedState = it }
-                }
+                    )
+                )
             }
 
             is SetBarFallSpeed -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         barFallSpeed = intent.speed.coerceIn(0.1f, 3f)
-                    ).also { _savedState = it }
-                }
+                    )
+                )
             }
 
             is SetBarSensitivity -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         barSensitivity = intent.sensitivity.coerceIn(0.1f, 3f)
-                    ).also { _savedState = it }
-                }
+                    )
+                )
             }
 
             is VisualizerIntent.SetBarSoundMode -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         barSoundMode = intent.mode
-                    ).also { _savedState = it }
-                }
+                    )
+                )
             }
 
             is VisualizerIntent.SetBarMaxHeight -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         barMaxHeight = intent.maxHeight.coerceIn(0.1f, 1f)
-                    ).also { _savedState = it }
-                }
+                    )
+                )
             }
 
             is VisualizerIntent.SetBarCount -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         barCount = intent.count.coerceIn(
-                            VisualizerDefaults.BAR_COUNT_MIN,
-                            VisualizerDefaults.BAR_COUNT_MAX
+                            VisualizerDefaults.BAR_COUNT_MIN, VisualizerDefaults.BAR_COUNT_MAX
                         )
-                    ).also { _savedState = it }
-                }
+                    )
+                )
             }
 
             is VisualizerIntent.SetBarOpacity -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         barOpacity = intent.opacity.coerceIn(0.1f, 1f)
-                    ).also { _savedState = it }
-                }
+                    )
+                )
             }
 
             VisualizerIntent.ResetSettings -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         barColorMode = VisualizerDefaults.BAR_COLOR_MODE,
                         solidBarColorArgb = VisualizerDefaults.SOLID_BAR_COLOR_ARGB,
@@ -170,8 +209,8 @@ internal constructor(
                         barMaxHeight = VisualizerDefaults.BAR_MAX_HEIGHT,
                         barCount = VisualizerDefaults.BAR_COUNT,
                         barOpacity = VisualizerDefaults.BAR_OPACITY
-                    ).also { _savedState = it }
-                }
+                    )
+                )
             }
         }
     }

@@ -1,6 +1,6 @@
 [versions]
 activityKtx = "1.13.0"
-agp = "9.1.1"
+agp = "9.2.1"
 firebaseBom = "34.13.0"
 fragmentKtx = "1.8.9"
 jtransforms = "3.2"
@@ -19,6 +19,8 @@ googleService = "4.4.4"
 crashlytics = "3.0.7"
 composeColorPicker = "0.7.0"
 appcompat = "1.7.1"
+kspVersion = "2.3.4"
+roomVersion = "2.8.4"
 
 [libraries]
 androidx-activity-ktx = { module = "androidx.activity:activity-ktx", version.ref = "activityKtx" }
@@ -49,6 +51,9 @@ androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.re
 androidx-media3-ui-compose = { group = "androidx.media3", name = "media3-ui-compose", version.ref = "media3Exoplayer" }
 compose-color-picker = { module = "com.godaddy.android.colorpicker:compose-color-picker", version.ref = "composeColorPicker" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "roomVersion" }
+androidx-room-runtime = { group = "androidx.room",  name = "room-runtime",  version.ref = "roomVersion" }
+androidx-room-compiler = { group = "androidx.room",  name = "room-compiler",  version.ref = "roomVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -57,3 +62,4 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinxSerialization" }
 google-services = { id = "com.google.gms.google-services", version.ref = "googleService" }
 crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "crashlytics" }
+google-ksp = { id = "com.google.devtools.ksp", version.ref = "kspVersion" }

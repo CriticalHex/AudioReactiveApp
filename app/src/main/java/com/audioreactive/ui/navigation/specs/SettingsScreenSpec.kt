@@ -6,17 +6,20 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import com.audioreactive.ui.screens.SettingsScreen
 import com.audioreactive.ui.viewmodel.AudioReactiveViewModelFactory
 import com.audioreactive.ui.viewmodel.LatticeViewModel
 import com.audioreactive.ui.viewmodel.VisualizerViewModel
+import com.audioreactive.ui.viewmodel.intent.LatticeIntent
+import com.audioreactive.ui.viewmodel.intent.VisualizerIntent
 
 data object SettingsScreenSpec : IScreenSpec {
 
     override val route: String = IScreenSpec.SETTINGS
-    override val arguments = emptyList<androidx.navigation.NamedNavArgument>()
+    override val arguments = emptyList<NamedNavArgument>()
 
     @Composable
     override fun Content(
@@ -54,110 +57,110 @@ data object SettingsScreenSpec : IScreenSpec {
             visualizerState = visualizerState,
             onSetLatticeColorMode = {
                 latticeViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.LatticeIntent.SetLatticeColorMode(it)
+                    LatticeIntent.SetLatticeColorMode(it)
                 )
             },
             onSetLatticeSolidColor = {
                 latticeViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.LatticeIntent.SetSolidColor(it)
+                    LatticeIntent.SetSolidColor(it)
                 )
             },
             onSetGyrosDisabled = {
                 latticeViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.LatticeIntent.SetGyrosDisabled(it)
+                    LatticeIntent.SetGyrosDisabled(it)
                 )
             },
             onSetLatticeDisabled = {
                 latticeViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.LatticeIntent.SetLatticeDisabled(it)
+                    LatticeIntent.SetLatticeDisabled(it)
                 )
             },
             onSetBarColorMode = {
                 visualizerViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.VisualizerIntent.SetBarColorMode(it)
+                    VisualizerIntent.SetBarColorMode(it)
                 )
             },
             onSetSolidBarColor = {
                 visualizerViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.VisualizerIntent.SetSolidBarColor(it)
+                    VisualizerIntent.SetSolidBarColor(it)
                 )
             },
             onSetBarsDisabled = {
                 visualizerViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.VisualizerIntent.SetBarsDisabled(it)
+                    VisualizerIntent.SetBarsDisabled(it)
                 )
             },
             onSetLatticeSpeed = {
                 latticeViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.LatticeIntent.SetSpeed(it)
+                    LatticeIntent.SetSpeed(it)
                 )
             },
             onSetLatticeSensitivity = {
                 latticeViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.LatticeIntent.SetSensitivity(it)
+                    LatticeIntent.SetSensitivity(it)
                 )
             },
             onSetLatticeLineDensity = {
                 latticeViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.LatticeIntent.SetLineDensity(it)
+                    LatticeIntent.SetLineDensity(it)
                 )
             },
             onSetBarRiseSpeed = {
                 visualizerViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.VisualizerIntent.SetBarRiseSpeed(it)
+                    VisualizerIntent.SetBarRiseSpeed(it)
                 )
             },
             onSetBarFallSpeed = {
                 visualizerViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.VisualizerIntent.SetBarFallSpeed(it)
+                    VisualizerIntent.SetBarFallSpeed(it)
                 )
             },
             onSetBarSensitivity = {
                 visualizerViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.VisualizerIntent.SetBarSensitivity(it)
+                    VisualizerIntent.SetBarSensitivity(it)
                 )
             },
             onSetBarSoundMode = {
                 visualizerViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.VisualizerIntent.SetBarSoundMode(it)
+                    VisualizerIntent.SetBarSoundMode(it)
                 )
             },
             onSetBarMaxHeight = {
                 visualizerViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.VisualizerIntent.SetBarMaxHeight(it)
+                    VisualizerIntent.SetBarMaxHeight(it)
                 )
             },
             onSetBarCount = {
                 visualizerViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.VisualizerIntent.SetBarCount(it)
+                    VisualizerIntent.SetBarCount(it)
                 )
             },
             onSetBarOpacity = {
                 visualizerViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.VisualizerIntent.SetBarOpacity(it)
+                    VisualizerIntent.SetBarOpacity(it)
                 )
             },
             onSetInvertGyroSpin = {
                 latticeViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.LatticeIntent.SetInvertGyroSpin(it)
+                    LatticeIntent.SetInvertGyroSpin(it)
                 )
             },
             onSetInvertGyroHorizontal = {
                 latticeViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.LatticeIntent.SetInvertGyroHorizontal(it)
+                    LatticeIntent.SetInvertGyroHorizontal(it)
                 )
             },
             onSetInvertGyroVertical = {
                 latticeViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.LatticeIntent.SetInvertGyroVertical(it)
+                    LatticeIntent.SetInvertGyroVertical(it)
                 )
             },
             onResetToDefaults = {
                 latticeViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.LatticeIntent.ResetSettings
+                    LatticeIntent.ResetSettings
                 )
                 visualizerViewModel.dispatcher.invoke(
-                    com.audioreactive.ui.viewmodel.intent.VisualizerIntent.ResetSettings
+                    VisualizerIntent.ResetSettings
                 )
             }
         )

@@ -5,6 +5,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.serialization.saved
+import androidx.lifecycle.viewModelScope
+import com.audioreactive.data.AudioReactiveRepo
 import com.audioreactive.sensor.RotationSensorManager
 import com.audioreactive.ui.reactor.Lattice
 import com.audioreactive.ui.viewmodel.effect.LatticeEffect
@@ -12,27 +14,30 @@ import com.audioreactive.ui.viewmodel.intent.LatticeIntent
 import com.audioreactive.ui.viewmodel.state.LatticeColorMode
 import com.audioreactive.ui.viewmodel.state.LatticeDefaults
 import com.audioreactive.ui.viewmodel.state.LatticeState
+import com.audioreactive.ui.viewmodel.state.VisualizerState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class LatticeViewModel
 internal constructor(
     appContext: Context,
-    savedStateHandle: SavedStateHandle
-): ViewModel(), IViewModelContract<LatticeState, LatticeIntent, LatticeEffect> {
+    savedStateHandle: SavedStateHandle,
+    val audioReactiveRepo: AudioReactiveRepo
+) : ViewModel(), IViewModelContract<LatticeState, LatticeIntent, LatticeEffect> {
     companion object {
         private const val LOG_TAG = "AR.LatticeViewModel"
         private const val TIME_SCALE: Double = 0.1
     }
 
     private var _savedState: LatticeState by savedStateHandle.saved(
-        key = "SAVED_LATTICE_STATE",
-        init = { LatticeState() }
-    )
+        key = "SAVED_LATTICE_STATE", init = { LatticeState() })
 
     private val _stateFlow: MutableStateFlow<LatticeState> = MutableStateFlow(_savedState)
     override val stateFlow: StateFlow<LatticeState> = _stateFlow.asStateFlow()
@@ -43,6 +48,27 @@ internal constructor(
     private val rotationSensorManager = RotationSensorManager(appContext)
     private var lattice: Lattice? = null
     private var sensorRunning = false
+
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            audioReactiveRepo.getSettingsFlow().collectLatest { settings ->
+                _stateFlow.update { state ->
+                    state.copy(
+                        latticeColorMode = settings.latticeColorMode,
+                        solidColorArgb = settings.solidColorArgb,
+                        disableLattice = settings.disableLattice,
+                        disableGyros = settings.disableGyros,
+                        speed = settings.speed,
+                        sensitivity = settings.sensitivity,
+                        lineDensity = settings.lineDensity,
+                        invertGyroSpin = settings.invertGyroSpin,
+                        invertGyroHorizontal = settings.invertGyroHorizontal,
+                        invertGyroVertical = settings.invertGyroVertical,
+                    ).also { _savedState = it }
+                }
+            }
+        }
+    }
 
     fun getOrCreateLattice(width: Int, height: Int): Lattice {
         val current = lattice
@@ -57,16 +83,14 @@ internal constructor(
             l.invertGyroVertical = _savedState.invertGyroVertical
             when (_savedState.latticeColorMode) {
                 LatticeColorMode.SOLID -> l.setColorOverride(Color(_savedState.solidColorArgb))
-                LatticeColorMode.DEFAULT, LatticeColorMode.DIMENSION_CYCLE ->
-                    l.clearColorOverride()
+                LatticeColorMode.DEFAULT, LatticeColorMode.DIMENSION_CYCLE -> l.clearColorOverride()
             }
             lattice = l
         }
     }
 
-    fun applySensorState() {
+    fun applySensorState(wantRunning: Boolean = !_savedState.disableGyros) {
         val l = lattice ?: return
-        val wantRunning = !_savedState.disableGyros
         if (wantRunning && !sensorRunning) {
             rotationSensorManager.start { matrix -> l.setRotation(matrix) }
             sensorRunning = true
@@ -89,6 +113,25 @@ internal constructor(
         super.onCleared()
     }
 
+    private fun updateSettings(state: LatticeState) {
+        viewModelScope.launch(Dispatchers.IO) {
+            audioReactiveRepo.updateSettings(
+                audioReactiveRepo.getSettings().copy(
+                    latticeColorMode = state.latticeColorMode,
+                    solidColorArgb = state.solidColorArgb,
+                    disableLattice = state.disableLattice,
+                    disableGyros = state.disableGyros,
+                    speed = state.speed,
+                    sensitivity = state.sensitivity,
+                    lineDensity = state.lineDensity,
+                    invertGyroSpin = state.invertGyroSpin,
+                    invertGyroHorizontal = state.invertGyroHorizontal,
+                    invertGyroVertical = state.invertGyroVertical,
+                )
+            )
+        }
+    }
+
     override fun handleIntent(intent: LatticeIntent) {
         when (intent) {
             is LatticeIntent.CalculateTime -> {
@@ -102,10 +145,7 @@ internal constructor(
                 } else {
                     _stateFlow.update {
                         _savedState.copy(
-                            timeInSeconds =
-                                _savedState.accumulatedTimeInSeconds + (
-                                        (intent.currentTimeInNano - _savedState.startTimeInNano!!
-                                                ) / 1_000_000_000.0) * TIME_SCALE
+                            timeInSeconds = _savedState.accumulatedTimeInSeconds + ((intent.currentTimeInNano - _savedState.startTimeInNano!!) / 1_000_000_000.0) * TIME_SCALE
                         ).also { _savedState = it }
                     }
                 }
@@ -116,10 +156,7 @@ internal constructor(
                     _stateFlow.update {
                         _savedState.copy(
                             startTimeInNano = null,
-                            accumulatedTimeInSeconds =
-                                _savedState.accumulatedTimeInSeconds + (
-                                        (intent.currentTimeInNano - _savedState.startTimeInNano!!
-                                                ) / 1_000_000_000.0) * TIME_SCALE
+                            accumulatedTimeInSeconds = _savedState.accumulatedTimeInSeconds + ((intent.currentTimeInNano - _savedState.startTimeInNano!!) / 1_000_000_000.0) * TIME_SCALE
                         ).also { _savedState = it }
                     }
                 }
@@ -128,100 +165,101 @@ internal constructor(
             LatticeIntent.Reset -> {
                 _stateFlow.update {
                     _savedState.copy(
-                        startTimeInNano = null,
-                        accumulatedTimeInSeconds = 0.0
+                        startTimeInNano = null, accumulatedTimeInSeconds = 0.0
                     ).also { _savedState = it }
                 }
             }
 
             is LatticeIntent.SetLatticeColorMode -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         latticeColorMode = intent.mode
-                    ).also { _savedState = it }
-                }
+                    )
+                )
             }
 
             is LatticeIntent.SetSolidColor -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         solidColorArgb = intent.colorArgb
-                    ).also { _savedState = it }
-                }
+                    )
+                )
             }
 
             is LatticeIntent.SetLatticeDisabled -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         disableLattice = intent.disabled
-                    ).also { _savedState = it }
-                }
+                    )
+                )
             }
 
             is LatticeIntent.SetGyrosDisabled -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         disableGyros = intent.disabled
-                    ).also { _savedState = it }
-                }
-                applySensorState()
+                    )
+                )
+                applySensorState(intent.disabled)
             }
 
             is LatticeIntent.SetSpeed -> {
-                _stateFlow.update {
+                val speed = intent.speed.coerceIn(0.05f, 2f)
+                updateSettings(
                     _savedState.copy(
-                        speed = intent.speed.coerceIn(0.05f, 2f)
-                    ).also { _savedState = it }
-                }
-                lattice?.speed = _savedState.speed.toDouble()
+                        speed = speed
+                    )
+                )
+                lattice?.speed = speed.toDouble()
             }
 
             is LatticeIntent.SetSensitivity -> {
-                _stateFlow.update {
+                val sensitivity = intent.sensitivity.coerceIn(0.1f, 3f)
+                updateSettings(
                     _savedState.copy(
-                        sensitivity = intent.sensitivity.coerceIn(0.1f, 3f)
-                    ).also { _savedState = it }
-                }
-                lattice?.sensitivity = _savedState.sensitivity
+                        sensitivity = sensitivity
+                    )
+                )
+                lattice?.sensitivity = sensitivity
             }
 
             is LatticeIntent.SetLineDensity -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         lineDensity = intent.density
-                    ).also { _savedState = it }
-                }
+                    )
+                )
             }
 
             is LatticeIntent.SetInvertGyroSpin -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         invertGyroSpin = intent.invert
-                    ).also { _savedState = it }
-                }
-                lattice?.invertGyroSpin = _savedState.invertGyroSpin
+                    )
+                )
+                lattice?.invertGyroSpin = intent.invert
             }
 
             is LatticeIntent.SetInvertGyroHorizontal -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         invertGyroHorizontal = intent.invert
-                    ).also { _savedState = it }
-                }
-                lattice?.invertGyroHorizontal = _savedState.invertGyroHorizontal
+                    )
+                )
+                lattice?.invertGyroHorizontal = intent.invert
             }
 
             is LatticeIntent.SetInvertGyroVertical -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         invertGyroVertical = intent.invert
-                    ).also { _savedState = it }
-                }
-                lattice?.invertGyroVertical = _savedState.invertGyroVertical
+                    )
+                )
+                lattice?.invertGyroVertical = intent.invert
             }
 
             LatticeIntent.ResetSettings -> {
-                _stateFlow.update {
+                updateSettings(
                     _savedState.copy(
                         latticeColorMode = LatticeDefaults.COLOR_MODE,
                         solidColorArgb = LatticeDefaults.SOLID_COLOR_ARGB,
@@ -233,18 +271,17 @@ internal constructor(
                         invertGyroSpin = LatticeDefaults.INVERT_GYRO_SPIN,
                         invertGyroHorizontal = LatticeDefaults.INVERT_GYRO_HORIZONTAL,
                         invertGyroVertical = LatticeDefaults.INVERT_GYRO_VERTICAL
-                    ).also { _savedState = it }
-                }
+                    )
+                )
                 lattice?.let { l ->
-                    l.speed = _savedState.speed.toDouble()
-                    l.sensitivity = _savedState.sensitivity
-                    l.invertGyroSpin = _savedState.invertGyroSpin
-                    l.invertGyroHorizontal = _savedState.invertGyroHorizontal
-                    l.invertGyroVertical = _savedState.invertGyroVertical
-                    when (_savedState.latticeColorMode) {
-                        LatticeColorMode.SOLID -> l.setColorOverride(Color(_savedState.solidColorArgb))
-                        LatticeColorMode.DEFAULT, LatticeColorMode.DIMENSION_CYCLE ->
-                            l.clearColorOverride()
+                    l.speed = LatticeDefaults.SPEED.toDouble()
+                    l.sensitivity = LatticeDefaults.SENSITIVITY
+                    l.invertGyroSpin = LatticeDefaults.INVERT_GYRO_SPIN
+                    l.invertGyroHorizontal = LatticeDefaults.INVERT_GYRO_HORIZONTAL
+                    l.invertGyroVertical = LatticeDefaults.INVERT_GYRO_VERTICAL
+                    when (LatticeDefaults.COLOR_MODE) {
+                        LatticeColorMode.SOLID -> l.setColorOverride(Color(LatticeDefaults.SOLID_COLOR_ARGB))
+                        LatticeColorMode.DEFAULT, LatticeColorMode.DIMENSION_CYCLE -> l.clearColorOverride()
                     }
                 }
                 applySensorState()
