@@ -1,11 +1,9 @@
 package com.audioreactive.ui.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.serialization.saved
 import androidx.lifecycle.viewModelScope
-import com.audioreactive.MainActivity
 import com.audioreactive.data.AudioReactiveRepo
 import com.audioreactive.ui.viewmodel.effect.VisualizerEffect
 import com.audioreactive.ui.viewmodel.intent.VisualizerIntent
@@ -213,6 +211,7 @@ internal constructor(
             VisualizerIntent.ResetSettings -> {
                 updateSettings(
                     _savedState.copy(
+                        customImage = VisualizerDefaults.CUSTOM_IMAGE,
                         barColorMode = VisualizerDefaults.BAR_COLOR_MODE,
                         solidBarColorArgb = VisualizerDefaults.SOLID_BAR_COLOR_ARGB,
                         disableBars = VisualizerDefaults.DISABLE_BARS,

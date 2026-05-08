@@ -14,7 +14,6 @@ import com.audioreactive.ui.viewmodel.intent.LatticeIntent
 import com.audioreactive.ui.viewmodel.state.LatticeColorMode
 import com.audioreactive.ui.viewmodel.state.LatticeDefaults
 import com.audioreactive.ui.viewmodel.state.LatticeState
-import com.audioreactive.ui.viewmodel.state.VisualizerState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
