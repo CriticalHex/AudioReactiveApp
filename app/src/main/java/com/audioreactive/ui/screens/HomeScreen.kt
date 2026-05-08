@@ -53,8 +53,8 @@ fun HomeScreen(
     var showCaptureDialog by remember { mutableStateOf(false) }
     var queueDialogOpen by remember { mutableStateOf(false) }
 
-    LaunchedEffect(touchCount, controlsVisible) {
-        if (controlsVisible) {
+    LaunchedEffect(touchCount, controlsVisible, queueDialogOpen) {
+        if (controlsVisible && !queueDialogOpen) {
             delay(4500)
             controlsVisible = false
         }
@@ -89,6 +89,7 @@ fun HomeScreen(
                     onNext = onAudioNext,
                     onOpenQueuePicker = onAddSongsToQueue,
                     onSelectQueueIndex = onSelectQueueIndex,
+                    showQueueDialog = queueDialogOpen,
                     onQueueDialogVisibilityChange = { queueDialogOpen = it }
                 )
             }

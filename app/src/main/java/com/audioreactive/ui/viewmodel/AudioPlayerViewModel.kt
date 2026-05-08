@@ -163,6 +163,7 @@ internal constructor(
     private fun createMediaItem(song: QueuedAudio): MediaItem {
         return MediaItem.Builder()
             .setUri(song.uri)
+            .setMediaId(song.title)
             .build()
     }
 
@@ -260,10 +261,15 @@ internal constructor(
         val queueTitles = (0 until _player.mediaItemCount).map { index ->
             val item = _player.getMediaItemAt(index)
 
-            item.mediaMetadata.title?.toString()
-                ?: _savedState.queueTitles.getOrNull(index)
-                ?: item.localConfiguration?.uri?.lastPathSegment?.substringBeforeLast(".")
-                ?: "Unknown Song"
+            if (index == _player.currentMediaItemIndex) {
+                _player.mediaMetadata.title?.toString()
+                    ?: item.mediaId
+                    ?: "Unknown Song"
+            } else {
+                item.mediaMetadata.title?.toString()
+                    ?: item.mediaId
+                    ?: "Unknown Song"
+            }
         }
 
         val currentIndex = if (_player.currentMediaItemIndex >= 0) {

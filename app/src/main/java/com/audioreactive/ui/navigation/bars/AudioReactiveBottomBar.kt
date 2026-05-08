@@ -51,10 +51,10 @@ fun AudioReactiveBottomBar(
     onSelectQueueIndex: (Int) -> Unit,
     progressBarHeight: Dp = 4.dp,
     progressBarWidth: Dp = 220.dp,
+    showQueueDialog: Boolean,
     onQueueDialogVisibilityChange: (Boolean) -> Unit = {}
 ) {
     val hasAudioLoaded = state.hasAudioLoaded
-    var showQueueDialog by rememberSaveable { mutableStateOf(false) }
 
     val progress = if (state.durationMs > 0L) {
         (state.currentPositionMs.toFloat() / state.durationMs.toFloat())
@@ -162,7 +162,6 @@ fun AudioReactiveBottomBar(
                         .padding(end = 24.dp),
                     enabled = state.hasAudioLoaded,
                     onClick = {
-                        showQueueDialog = true
                         onQueueDialogVisibilityChange(true)
                     }
                 ) {
@@ -179,9 +178,7 @@ fun AudioReactiveBottomBar(
 
     if (showQueueDialog) {
         AlertDialog(
-            onDismissRequest = {
-                onQueueDialogVisibilityChange(false)
-            },
+            onDismissRequest = {},
             containerColor = Color(0xFF111111),
             title = {
                 Text(
@@ -206,8 +203,8 @@ fun AudioReactiveBottomBar(
                         state.queueTitles.forEachIndexed { index, title ->
                             TextButton(
                                 onClick = {
-                                    onQueueDialogVisibilityChange(false)
                                     onSelectQueueIndex(index)
+                                    onQueueDialogVisibilityChange(false)
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -244,7 +241,6 @@ fun AudioReactiveBottomBar(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        onQueueDialogVisibilityChange(false)
                         onOpenQueuePicker()
                     }
                 ) {
@@ -262,7 +258,7 @@ fun AudioReactiveBottomBar(
                 ) {
                     Text(
                         text = "Close",
-                        color = Color.Gray
+                        color = Color.LightGray
                     )
                 }
             }
