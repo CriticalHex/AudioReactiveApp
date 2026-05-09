@@ -54,11 +54,9 @@ data class VisualizerState(
 
         other as VisualizerState
 
-        if (!spectrum.contentEquals(other.spectrum)) return false
         if (volume != other.volume) return false
         if (running != other.running) return false
         if (customImage != other.customImage) return false
-        if (barColorMode != other.barColorMode) return false
         if (solidBarColorArgb != other.solidBarColorArgb) return false
         if (disableBars != other.disableBars) return false
         if (barRiseSpeed != other.barRiseSpeed) return false
@@ -68,16 +66,15 @@ data class VisualizerState(
         if (barMaxHeight != other.barMaxHeight) return false
         if (barCount != other.barCount) return false
         if (barOpacity != other.barOpacity) return false
+        if (!spectrum.contentEquals(other.spectrum)) return false
+        if (barColorMode != other.barColorMode) return false
 
         return true
     }
 
     override fun hashCode(): Int {
-        var result = spectrum.contentHashCode()
-        result = 31 * result + volume.hashCode()
+        var result = volume.hashCode()
         result = 31 * result + running.hashCode()
-        result = 31 * result + customImage.hashCode()
-        result = 31 * result + barColorMode.hashCode()
         result = 31 * result + solidBarColorArgb
         result = 31 * result + disableBars.hashCode()
         result = 31 * result + barRiseSpeed.hashCode()
@@ -87,6 +84,8 @@ data class VisualizerState(
         result = 31 * result + barMaxHeight.hashCode()
         result = 31 * result + barCount
         result = 31 * result + barOpacity.hashCode()
+        result = 31 * result + spectrum.contentHashCode()
+        result = 31 * result + barColorMode.hashCode()
         return result
     }
 }
