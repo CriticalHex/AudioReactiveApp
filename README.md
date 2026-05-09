@@ -1,6 +1,10 @@
 # Aurora Audio
 
-An Android audio visualizer that reacts to music in real time.
+Aurora Audio is an Android app that turns any sound into a living visualizer. 
+Play a song from your phone, or capture audio from any other app on your device, 
+and watch the music come alive as a 24-dimensional rotating lattice and a real 
+time spectrum analyzer. Tilt the phone to push the lattice through space, 
+customize colors and motion to taste, and let the visuals run full screen.
 
 ## Usage
 
